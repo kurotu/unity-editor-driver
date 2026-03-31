@@ -1,0 +1,23 @@
+{
+    "name": "UniEditWright.Tests.Editor",
+    "rootNamespace": "UniEditWright.Tests",
+    "references": [
+        "UniEditWright.Editor",
+        "SampleWindows.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
