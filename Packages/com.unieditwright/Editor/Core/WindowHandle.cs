@@ -71,14 +71,6 @@ namespace UniEditWright
         }
 
         /// <summary>
-        /// Returns a Playwright-like Locator for the IMGUI control with the given label.
-        /// </summary>
-        public Locator GetByLabel(string label)
-        {
-            return new Locator(_window, label);
-        }
-
-        /// <summary>
         /// Forces the window to repaint.
         /// </summary>
         public void Repaint()

@@ -118,16 +118,5 @@ namespace UniEditWright.Tests
 
             Assert.IsTrue(File.Exists(filePath), "Screenshot file should be created");
         }
-
-        [Test]
-        public void GetByLabel_ReturnsLocator()
-        {
-            var handle = new WindowHandle(_window);
-
-            var locator = handle.GetByLabel("Text Field");
-
-            Assert.IsNotNull(locator);
-            Assert.AreEqual("Text Field", locator.Label);
-        }
     }
 }

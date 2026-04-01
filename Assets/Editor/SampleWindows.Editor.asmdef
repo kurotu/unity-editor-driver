@@ -1,9 +1,7 @@
 {
     "name": "SampleWindows.Editor",
     "rootNamespace": "",
-    "references": [
-        "UniEditWright.Editor"
-    ],
+    "references": [],
     "includePlatforms": [
         "Editor"
     ],

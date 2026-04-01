@@ -3,6 +3,7 @@
 ## Project Overview
 UniEditWright is an E2E testing framework for Unity Editor extensions.
 It provides a Playwright-like API for automating EditorWindow interactions and capturing screenshots.
+**No modifications to the target EditorWindow code are required.**
 
 ## Architecture
 
@@ -10,13 +11,12 @@ It provides a Playwright-like API for automating EditorWindow interactions and c
 - **Editor/Core/**: `EditorDriver` (window lifecycle), `WindowHandle` (interaction wrapper)
 - **Editor/Input/**: `InputSimulator` (synthetic Event creation and dispatch)
 - **Editor/Screenshot/**: `ScreenshotCapture` (window capture to PNG)
-- **Editor/Locator/**: `Locator` (Playwright-like control locator), `ControlEntry` (control metadata)
-- **Editor/Tracking/**: `GUITracker` (IMGUI control tracking wrapper)
-- **Tests/Editor/**: NUnit EditMode tests (58 tests)
+- **Editor/Page/**: `ImguiPage` (non-invasive IMGUI control descriptor), `ImguiLocator` (Playwright-like interaction), `LayoutCalculator` (rect computation from IMGUI layout constants), `ImguiControlInfo` (control metadata)
+- **Tests/Editor/**: NUnit EditMode tests (59 tests)
 
 ### Sample Window: `Assets/Editor/MyWindow.cs`
-- Example EditorWindow using GUITracker for control tracking
-- Assembly: `SampleWindows.Editor`
+- Example EditorWindow using **plain IMGUI** (no framework dependency)
+- Assembly: `SampleWindows.Editor` (no reference to UniEditWright)
 
 ## Conventions
 
@@ -35,7 +35,7 @@ It provides a Playwright-like API for automating EditorWindow interactions and c
 
 ### Unity-Specific Notes
 - `Event.type` getter returns `Ignore` for mouse events outside OnGUI context (Unity 2022.3 limitation). The raw type IS set correctly and `SendEvent` works.
-- `GUILayoutUtility.GetLastRect()` cannot be called after `BeginToggleGroup` — use direct entry recording instead.
+- `GUI.skin` accessors require OnGUI context — use `EditorStyles.*` for layout calculations outside OnGUI.
 - Assembly definitions (`.asmdef`) are required for cross-assembly references in Unity.
 
 ## Build & Test Commands
@@ -47,21 +47,34 @@ uloop compile --project-path .
 uloop run-tests --filter-type assembly --filter-value "UniEditWright.Tests.Editor"
 
 # Run specific test
-uloop run-tests --filter-type exact --filter-value "UniEditWright.Tests.EditorDriverTests.OpenWindow_ReturnsNonNullHandle"
+uloop run-tests --filter-type exact --filter-value "UniEditWright.Tests.ImguiPageTests.Describe_ReturnsPageWithControls"
 ```
 
-## GUITracker Integration Guide
-To make an EditorWindow trackable for E2E tests:
-1. Add `using UniEditWright;`
-2. In `OnGUI()`, wrap controls with `GUITracker`:
+## ImguiPage Usage Guide (Non-Invasive E2E Testing)
+To E2E test any IMGUI EditorWindow **without modifying it**:
+
+1. Open the window via `EditorDriver`
+2. Describe its layout with `ImguiPage.Describe`
+3. Interact via `ImguiLocator`
+
 ```csharp
-void OnGUI()
+// The target window uses plain IMGUI — no framework dependency
+// void OnGUI() { EditorGUILayout.TextField("Name", name); ... }
+
+var handle = driver.OpenWindow<MyWindow>();
+yield return null;
+
+var page = ImguiPage.Describe(handle.Window, p =>
 {
-    var t = GUITracker.Begin(this);
-    t.Label("Title", EditorStyles.boldLabel);
-    myField = t.TextField("Label", myField);
-    myBool = t.Toggle("Check", myBool);
-    myFloat = t.Slider("Amount", myFloat, 0, 1);
-    t.End();
-}
+    p.Label("Base Settings");
+    p.TextField("Text Field");
+    p.BeginToggleGroup("Optional Settings");
+    p.Toggle("Toggle");
+    p.Slider("Slider", -3, 3);
+    p.EndToggleGroup();
+});
+
+page.GetByLabel("Text Field").Fill("new value");
+page.GetByLabel("Toggle").Toggle();
+page.GetByLabel("Slider").SetSlider(0.5f);
 ```

@@ -9,7 +9,7 @@ namespace UniEditWright.Tests
 {
     /// <summary>
     /// End-to-end integration test using MyWindow as the test target.
-    /// Demonstrates the full UniEditWright API workflow.
+    /// Demonstrates the non-invasive UniEditWright API — MyWindow uses plain IMGUI.
     /// </summary>
     [TestFixture]
     public class MyWindowE2ETests
@@ -21,7 +21,7 @@ namespace UniEditWright.Tests
         public void SetUp()
         {
             _driver = new EditorDriver();
-            _screenshotDir = Path.Combine(Path.GetTempPath(), "UniEditWright_E2E_" + System.Guid.NewGuid().ToString("N"));
+            _screenshotDir = Path.Combine("UniEditWright_E2E_" + System.Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(_screenshotDir);
         }
 
@@ -29,8 +29,19 @@ namespace UniEditWright.Tests
         public void TearDown()
         {
             _driver?.Dispose();
-            if (Directory.Exists(_screenshotDir))
-                Directory.Delete(_screenshotDir, recursive: true);
+        }
+
+        private static ImguiPage DescribeMyWindow(EditorWindow window)
+        {
+            return ImguiPage.Describe(window, p =>
+            {
+                p.Label("Base Settings", EditorStyles.boldLabel);
+                p.TextField("Text Field");
+                p.BeginToggleGroup("Optional Settings");
+                p.Toggle("Toggle");
+                p.Slider("Slider", -3, 3);
+                p.EndToggleGroup();
+            });
         }
 
         [UnityTest]
@@ -72,32 +83,36 @@ namespace UniEditWright.Tests
         }
 
         [UnityTest]
-        public IEnumerator GetByLabel_FindsTrackedControls()
+        public IEnumerator ImguiPage_FindsControls_ByLabel()
         {
             var handle = _driver.OpenWindow<MyWindow>();
             yield return null;
 
-            var textField = handle.GetByLabel("Text Field");
+            var page = DescribeMyWindow(handle.Window);
+
+            var textField = page.GetByLabel("Text Field");
             Assert.IsNotNull(textField);
             Assert.AreEqual("Text Field", textField.Label);
+            Assert.AreEqual(ControlType.TextField, textField.ControlType);
 
-            var rect = textField.GetRect();
+            var rect = textField.Rect;
             Assert.Greater(rect.width, 0, "TextField rect should have positive width");
             Assert.Greater(rect.height, 0, "TextField rect should have positive height");
         }
 
         [UnityTest]
-        public IEnumerator GetByLabel_FindsSlider()
+        public IEnumerator ImguiPage_FindsSlider()
         {
             var handle = _driver.OpenWindow<MyWindow>();
-            // Enable the optional settings group first
-            handle.SetFieldValue("groupEnabled", true);
             yield return null;
 
-            var slider = handle.GetByLabel("Slider");
-            Assert.IsNotNull(slider);
+            var page = DescribeMyWindow(handle.Window);
 
-            var rect = slider.GetRect();
+            var slider = page.GetByLabel("Slider");
+            Assert.IsNotNull(slider);
+            Assert.AreEqual(ControlType.Slider, slider.ControlType);
+
+            var rect = slider.Rect;
             Assert.Greater(rect.width, 0);
         }
 
@@ -107,7 +122,6 @@ namespace UniEditWright.Tests
             var handle = _driver.OpenWindow<MyWindow>();
             yield return null;
 
-            // Click at center of window
             var pos = handle.Window.position;
             Assert.DoesNotThrow(() => handle.ClickAt(pos.width / 2, pos.height / 2));
         }
@@ -134,8 +148,9 @@ namespace UniEditWright.Tests
             handle.Screenshot(Path.Combine(_screenshotDir, "step2_modified.png"));
             Assert.IsTrue(File.Exists(Path.Combine(_screenshotDir, "step2_modified.png")));
 
-            // 6. Verify tracked controls exist
-            var textField = handle.GetByLabel("Text Field");
+            // 6. Verify ImguiPage can describe the window
+            var page = DescribeMyWindow(handle.Window);
+            var textField = page.GetByLabel("Text Field");
             Assert.IsNotNull(textField);
 
             // 7. Close

@@ -1,6 +1,5 @@
 using UnityEngine;
 using UnityEditor;
-using UniEditWright;
 
 public class MyWindow : EditorWindow
 {
@@ -20,16 +19,12 @@ public class MyWindow : EditorWindow
 
     void OnGUI()
     {
-        var t = GUITracker.Begin(this);
+        GUILayout.Label("Base Settings", EditorStyles.boldLabel);
+        myString = EditorGUILayout.TextField("Text Field", myString);
 
-        t.Label("Base Settings", EditorStyles.boldLabel);
-        myString = t.TextField("Text Field", myString);
-
-        groupEnabled = t.BeginToggleGroup("Optional Settings", groupEnabled);
-        myBool = t.Toggle("Toggle", myBool);
-        myFloat = t.Slider("Slider", myFloat, -3, 3);
-        t.EndToggleGroup();
-
-        t.End();
+        groupEnabled = EditorGUILayout.BeginToggleGroup("Optional Settings", groupEnabled);
+        myBool = EditorGUILayout.Toggle("Toggle", myBool);
+        myFloat = EditorGUILayout.Slider("Slider", myFloat, -3, 3);
+        EditorGUILayout.EndToggleGroup();
     }
 }
