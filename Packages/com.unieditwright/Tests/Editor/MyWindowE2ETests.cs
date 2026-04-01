@@ -9,7 +9,8 @@ namespace UniEditWright.Tests
 {
     /// <summary>
     /// End-to-end integration test using MyWindow as the test target.
-    /// Demonstrates the non-invasive UniEditWright API — MyWindow uses plain IMGUI.
+    /// Fully black-box: no reflection into MyWindow's fields.
+    /// All verification is done through UI reads (ReadText, Screenshot).
     /// </summary>
     [TestFixture]
     public class MyWindowE2ETests
@@ -29,11 +30,13 @@ namespace UniEditWright.Tests
         public void TearDown()
         {
             _driver?.Dispose();
+            if (Directory.Exists(_screenshotDir))
+                Directory.Delete(_screenshotDir, recursive: true);
         }
 
-        private static ImguiPage DescribeMyWindow(EditorWindow window)
+        private static Page DescribeMyWindow(EditorWindow window)
         {
-            return ImguiPage.Describe(window, p =>
+            return Page.Describe(window, p =>
             {
                 p.Label("Base Settings", EditorStyles.boldLabel);
                 p.TextField("Text Field");
@@ -59,31 +62,61 @@ namespace UniEditWright.Tests
         }
 
         [UnityTest]
-        public IEnumerator ReadDefaultFieldValues_ViaReflection()
+        public IEnumerator ReadTextField_ReturnsDisplayedValue()
         {
             var handle = _driver.OpenWindow<MyWindow>();
             yield return null;
 
-            Assert.AreEqual("Hello World", handle.GetFieldValue<string>("myString"));
-            Assert.AreEqual(true, handle.GetFieldValue<bool>("myBool"));
-            Assert.AreEqual(1.23f, handle.GetFieldValue<float>("myFloat"), 0.001f);
+            var page = DescribeMyWindow(handle.Window);
+            var text = page.GetByLabel("Text Field").ReadText();
+
+            Assert.AreEqual("Hello World", text);
         }
 
         [UnityTest]
-        public IEnumerator SetFieldValue_ThenVerify()
+        public IEnumerator FillTextField_ThenReadBack()
         {
             var handle = _driver.OpenWindow<MyWindow>();
             yield return null;
 
-            handle.SetFieldValue("myString", "Modified by test");
+            var page = DescribeMyWindow(handle.Window);
+            var textField = page.GetByLabel("Text Field");
+
+            textField.Fill("E2E Test Value");
             handle.Repaint();
             yield return null;
 
-            Assert.AreEqual("Modified by test", handle.GetFieldValue<string>("myString"));
+            var readBack = textField.ReadText();
+            Assert.AreEqual("E2E Test Value", readBack);
         }
 
         [UnityTest]
-        public IEnumerator ImguiPage_FindsControls_ByLabel()
+        public IEnumerator ToggleGroup_ClickEnablesGroup()
+        {
+            var handle = _driver.OpenWindow<MyWindow>();
+            yield return null;
+
+            var page = DescribeMyWindow(handle.Window);
+
+            // Before toggling: group is disabled, so inner controls are unresponsive.
+            // ReadText on Slider should return empty because the disabled field won't focus.
+            var sliderTextBefore = page.GetByLabel("Slider").ReadText();
+            Assert.AreEqual("", sliderTextBefore,
+                "Slider should not be readable when toggle group is disabled");
+
+            // Click the toggle group to enable it
+            page.GetByLabel("Optional Settings").Toggle();
+            handle.Repaint();
+            yield return null;
+
+            // After toggling: group is enabled, controls respond to input.
+            var sliderTextAfter = page.GetByLabel("Slider").ReadText();
+            Assert.AreNotEqual("", sliderTextAfter,
+                "Slider should be readable when toggle group is enabled");
+        }
+
+        [UnityTest]
+        public IEnumerator Page_FindsControls_ByLabel()
         {
             var handle = _driver.OpenWindow<MyWindow>();
             yield return null;
@@ -101,7 +134,7 @@ namespace UniEditWright.Tests
         }
 
         [UnityTest]
-        public IEnumerator ImguiPage_FindsSlider()
+        public IEnumerator Page_FindsSlider()
         {
             var handle = _driver.OpenWindow<MyWindow>();
             yield return null;
@@ -111,50 +144,46 @@ namespace UniEditWright.Tests
             var slider = page.GetByLabel("Slider");
             Assert.IsNotNull(slider);
             Assert.AreEqual(ControlType.Slider, slider.ControlType);
-
-            var rect = slider.Rect;
-            Assert.Greater(rect.width, 0);
+            Assert.Greater(slider.Rect.width, 0);
         }
 
         [UnityTest]
-        public IEnumerator ClickAt_DoesNotThrow()
-        {
-            var handle = _driver.OpenWindow<MyWindow>();
-            yield return null;
-
-            var pos = handle.Window.position;
-            Assert.DoesNotThrow(() => handle.ClickAt(pos.width / 2, pos.height / 2));
-        }
-
-        [UnityTest]
-        public IEnumerator FullWorkflow_OpenInteractScreenshot()
+        public IEnumerator FullWorkflow_BlackBox()
         {
             // 1. Open window
             var handle = _driver.OpenWindow<MyWindow>();
             yield return null;
 
+            var page = DescribeMyWindow(handle.Window);
+
             // 2. Take initial screenshot
             handle.Screenshot(Path.Combine(_screenshotDir, "step1_initial.png"));
 
-            // 3. Change a value via reflection
-            handle.SetFieldValue("myString", "E2E Test Value");
+            // 3. Read initial text field value
+            var initialText = page.GetByLabel("Text Field").ReadText();
+            Assert.AreEqual("Hello World", initialText);
+
+            // 4. Type new text
+            page.GetByLabel("Text Field").Fill("Black Box Test");
             handle.Repaint();
             yield return null;
 
-            // 4. Verify the change
-            Assert.AreEqual("E2E Test Value", handle.GetFieldValue<string>("myString"));
+            // 5. Verify via ReadText (no reflection)
+            var modifiedText = page.GetByLabel("Text Field").ReadText();
+            Assert.AreEqual("Black Box Test", modifiedText);
 
-            // 5. Take final screenshot
+            // 6. Enable toggle group via UI click
+            page.GetByLabel("Optional Settings").Toggle();
+            handle.Repaint();
+            yield return null;
+
+            // 7. Take final screenshot
             handle.Screenshot(Path.Combine(_screenshotDir, "step2_modified.png"));
             Assert.IsTrue(File.Exists(Path.Combine(_screenshotDir, "step2_modified.png")));
 
-            // 6. Verify ImguiPage can describe the window
-            var page = DescribeMyWindow(handle.Window);
-            var textField = page.GetByLabel("Text Field");
-            Assert.IsNotNull(textField);
-
-            // 7. Close
+            // 8. Close
             _driver.CloseAll();
         }
+
     }
 }

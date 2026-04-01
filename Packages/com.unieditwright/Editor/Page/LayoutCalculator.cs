@@ -1,25 +1,37 @@
 using System.Collections.Generic;
+using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 
 namespace UniEditWright
 {
     /// <summary>
-    /// Computes IMGUI control rects from a layout descriptor using EditorGUI layout constants.
-    /// Replicates Unity's EditorGUILayout vertical stacking algorithm.
+    /// Resolves control rects for an <see cref="EditorWindow"/>.
+    /// Implementations are technology-specific (IMGUI, UIElements).
+    /// Rects are in GUIView coordinate space (suitable for SendEvent).
     /// </summary>
-    internal static class LayoutCalculator
+    public interface ILayoutResolver
     {
         /// <summary>
-        /// Resolves the <see cref="ImguiControlInfo.Rect"/> for each control in the list
-        /// based on the target window's dimensions and IMGUI layout constants.
+        /// Fills the <see cref="ControlInfo.Rect"/> of each control in the list.
         /// </summary>
-        public static void Resolve(EditorWindow window, IList<ImguiControlInfo> controls)
+        void Resolve(EditorWindow window, IList<ControlInfo> controls);
+    }
+
+    /// <summary>
+    /// Resolves rects for IMGUI windows by replicating EditorGUILayout's vertical stacking.
+    /// Rects are in GUIView coordinate space so that <see cref="EditorWindow.SendEvent"/>
+    /// hits the correct controls.
+    /// </summary>
+    internal sealed class ImguiLayoutResolver : ILayoutResolver
+    {
+        public void Resolve(EditorWindow window, IList<ControlInfo> controls)
         {
             float windowWidth = window.position.width;
             float lineHeight = EditorGUIUtility.singleLineHeight;
+            float contentYOffset = GetContentYOffset(window);
 
-            float y = 0f;
+            float y = contentYOffset;
             int groupDepth = 0;
 
             GUIStyle prevStyle = null;
@@ -38,16 +50,12 @@ namespace UniEditWright
 
                 GUIStyle currentStyle = GetLayoutStyle(control);
 
-                // Compute vertical spacing via margin collapsing (same as GUILayout)
                 if (prevStyle != null)
                 {
                     float gap = Mathf.Max(prevStyle.margin.bottom, currentStyle.margin.top);
                     y += gap;
                 }
-                else
-                {
-                    y += currentStyle.margin.top;
-                }
+                // First control: no extra top margin (the implicit GUILayout group absorbs it)
 
                 float indent = groupDepth > 0 ? EditorGUI.indentLevel * 15f : 0f;
                 float leftMargin = currentStyle.margin.left + indent;
@@ -68,7 +76,37 @@ namespace UniEditWright
             }
         }
 
-        private static GUIStyle GetLayoutStyle(ImguiControlInfo control)
+        /// <summary>
+        /// Returns the Y offset from the top of the GUIView to the content area.
+        /// This is typically the tab-bar height for docked windows.
+        /// </summary>
+        private static float GetContentYOffset(EditorWindow window)
+        {
+            try
+            {
+                // EditorWindow.m_Parent is the hosting View (DockArea for docked windows).
+                // DockArea.borderSize.top gives the tab-bar height.
+                var parentField = typeof(EditorWindow).GetField(
+                    "m_Parent", BindingFlags.Instance | BindingFlags.NonPublic);
+                if (parentField == null) return 0f;
+
+                var parent = parentField.GetValue(window);
+                if (parent == null) return 0f;
+
+                var borderProp = parent.GetType().GetProperty(
+                    "borderSize", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                if (borderProp == null) return 0f;
+
+                var border = borderProp.GetValue(parent) as RectOffset;
+                return border?.top ?? 0f;
+            }
+            catch
+            {
+                return 0f;
+            }
+        }
+
+        private static GUIStyle GetLayoutStyle(ControlInfo control)
         {
             if (control.CustomStyle != null)
                 return control.CustomStyle;

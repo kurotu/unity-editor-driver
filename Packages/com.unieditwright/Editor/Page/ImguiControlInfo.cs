@@ -3,9 +3,10 @@ using UnityEngine;
 namespace UniEditWright
 {
     /// <summary>
-    /// Describes a single IMGUI control in a page layout descriptor.
+    /// Describes a single control in a window layout descriptor.
+    /// Technology-agnostic: works for both IMGUI and UIElements windows.
     /// </summary>
-    public class ImguiControlInfo
+    public class ControlInfo
     {
         public string Label { get; }
         public ControlType Type { get; }
@@ -14,11 +15,11 @@ namespace UniEditWright
         public float SliderMax { get; }
 
         /// <summary>
-        /// Computed rect in window-local coordinates. Set by <see cref="LayoutCalculator"/>.
+        /// Computed rect in window-local coordinates. Set by <see cref="ILayoutResolver"/>.
         /// </summary>
         public Rect Rect { get; internal set; }
 
-        public ImguiControlInfo(string label, ControlType type, GUIStyle customStyle = null,
+        public ControlInfo(string label, ControlType type, GUIStyle customStyle = null,
             float sliderMin = 0f, float sliderMax = 1f)
         {
             Label = label;
@@ -30,7 +31,7 @@ namespace UniEditWright
     }
 
     /// <summary>
-    /// Types of IMGUI controls supported by <see cref="ImguiPage"/>.
+    /// Types of controls supported by <see cref="Page"/>.
     /// </summary>
     public enum ControlType
     {

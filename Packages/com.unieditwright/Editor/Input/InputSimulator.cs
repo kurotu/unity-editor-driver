@@ -63,6 +63,19 @@ namespace UniEditWright
             return evt;
         }
 
+        /// <summary>
+        /// Sends a ValidateCommand + ExecuteCommand pair.
+        /// Standard command names: "SelectAll", "Copy", "Cut", "Paste", "Delete".
+        /// </summary>
+        public static void SendCommand(EditorWindow window, string commandName)
+        {
+            var validate = new Event { type = EventType.ValidateCommand, commandName = commandName };
+            window.SendEvent(validate);
+
+            var execute = new Event { type = EventType.ExecuteCommand, commandName = commandName };
+            window.SendEvent(execute);
+        }
+
         public static Event CreateKeyEvent(EventType type, KeyCode keyCode, EventModifiers modifiers = EventModifiers.None)
         {
             var evt = new Event();

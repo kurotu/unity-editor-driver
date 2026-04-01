@@ -8,7 +8,7 @@ using UnityEngine.TestTools;
 namespace UniEditWright.Tests
 {
     [TestFixture]
-    public class ImguiPageTests
+    public class PageTests
     {
         private EditorWindow _window;
 
@@ -32,20 +32,20 @@ namespace UniEditWright.Tests
         public void Describe_NullWindowThrows()
         {
             Assert.Throws<ArgumentNullException>(() =>
-                ImguiPage.Describe(null, p => p.Label("x")));
+                Page.Describe(null, p => p.Label("x")));
         }
 
         [Test]
         public void Describe_NullConfigureThrows()
         {
             Assert.Throws<ArgumentNullException>(() =>
-                ImguiPage.Describe(_window, null));
+                Page.Describe(_window, null));
         }
 
         [Test]
         public void Describe_ReturnsPageWithControls()
         {
-            var page = ImguiPage.Describe(_window, p =>
+            var page = Page.Describe(_window, p =>
             {
                 p.Label("Title");
                 p.TextField("Name");
@@ -61,7 +61,7 @@ namespace UniEditWright.Tests
         [Test]
         public void Describe_AllControlTypes()
         {
-            var page = ImguiPage.Describe(_window, p =>
+            var page = Page.Describe(_window, p =>
             {
                 p.Label("L");
                 p.TextField("TF");
@@ -89,7 +89,7 @@ namespace UniEditWright.Tests
         [Test]
         public void Describe_SliderStoresMinMax()
         {
-            var page = ImguiPage.Describe(_window, p =>
+            var page = Page.Describe(_window, p =>
             {
                 p.Slider("Amount", -5f, 5f);
             });
@@ -101,7 +101,7 @@ namespace UniEditWright.Tests
         [Test]
         public void Describe_LabelWithCustomStyle()
         {
-            var page = ImguiPage.Describe(_window, p =>
+            var page = Page.Describe(_window, p =>
             {
                 p.Label("Bold", EditorStyles.boldLabel);
             });
@@ -114,7 +114,7 @@ namespace UniEditWright.Tests
         [Test]
         public void Resolve_AssignsPositiveRects()
         {
-            var page = ImguiPage.Describe(_window, p =>
+            var page = Page.Describe(_window, p =>
             {
                 p.Label("Title");
                 p.TextField("Name");
@@ -131,7 +131,7 @@ namespace UniEditWright.Tests
         [Test]
         public void Resolve_ControlsStackVertically()
         {
-            var page = ImguiPage.Describe(_window, p =>
+            var page = Page.Describe(_window, p =>
             {
                 p.Label("A");
                 p.TextField("B");
@@ -148,7 +148,7 @@ namespace UniEditWright.Tests
         [Test]
         public void Resolve_EndToggleGroupHasZeroRect()
         {
-            var page = ImguiPage.Describe(_window, p =>
+            var page = Page.Describe(_window, p =>
             {
                 p.BeginToggleGroup("Group");
                 p.Toggle("Inner");
@@ -163,7 +163,7 @@ namespace UniEditWright.Tests
         [Test]
         public void Resolve_ControlsHaveExpectedHeight()
         {
-            var page = ImguiPage.Describe(_window, p =>
+            var page = Page.Describe(_window, p =>
             {
                 p.TextField("Name");
             });
@@ -174,7 +174,7 @@ namespace UniEditWright.Tests
         [Test]
         public void Refresh_RecomputesRects()
         {
-            var page = ImguiPage.Describe(_window, p =>
+            var page = Page.Describe(_window, p =>
             {
                 p.TextField("Name");
             });
@@ -196,7 +196,7 @@ namespace UniEditWright.Tests
         [Test]
         public void GetByLabel_ReturnsLocator()
         {
-            var page = ImguiPage.Describe(_window, p =>
+            var page = Page.Describe(_window, p =>
             {
                 p.TextField("Email");
             });
@@ -211,7 +211,7 @@ namespace UniEditWright.Tests
         [Test]
         public void GetByLabel_ThrowsForUnknownLabel()
         {
-            var page = ImguiPage.Describe(_window, p =>
+            var page = Page.Describe(_window, p =>
             {
                 p.TextField("Email");
             });
@@ -222,7 +222,7 @@ namespace UniEditWright.Tests
         [Test]
         public void GetByLabel_NullLabelThrows()
         {
-            var page = ImguiPage.Describe(_window, p =>
+            var page = Page.Describe(_window, p =>
             {
                 p.TextField("Email");
             });
@@ -230,14 +230,14 @@ namespace UniEditWright.Tests
             Assert.Throws<ArgumentNullException>(() => page.GetByLabel(null));
         }
 
-        // ── ImguiLocator interaction ────────────────────────────────
+        // ── Locator interaction ────────────────────────────────
 
         [UnityTest]
         public IEnumerator Locator_Click_DoesNotThrow()
         {
             yield return null;
 
-            var page = ImguiPage.Describe(_window, p =>
+            var page = Page.Describe(_window, p =>
             {
                 p.Label("Title");
                 p.TextField("Name");
@@ -251,7 +251,7 @@ namespace UniEditWright.Tests
         {
             yield return null;
 
-            var page = ImguiPage.Describe(_window, p =>
+            var page = Page.Describe(_window, p =>
             {
                 p.Label("Title");
                 p.TextField("Name");
@@ -265,7 +265,7 @@ namespace UniEditWright.Tests
         {
             yield return null;
 
-            var page = ImguiPage.Describe(_window, p =>
+            var page = Page.Describe(_window, p =>
             {
                 p.Toggle("Enabled");
             });
@@ -278,7 +278,7 @@ namespace UniEditWright.Tests
         {
             yield return null;
 
-            var page = ImguiPage.Describe(_window, p =>
+            var page = Page.Describe(_window, p =>
             {
                 p.Slider("Amount", 0, 1);
             });

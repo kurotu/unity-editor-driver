@@ -2,127 +2,149 @@ using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace UniEditWright
 {
     /// <summary>
-    /// Describes the IMGUI control layout of an EditorWindow for non-invasive E2E testing.
-    /// The target window requires zero modifications — the layout is described in test code.
+    /// Describes the control layout of an EditorWindow for non-invasive E2E testing.
+    /// Technology-agnostic: works for both IMGUI and UIElements windows.
+    /// The target window requires zero modifications.
     /// <para>
     /// Usage:
     /// <code>
-    /// var page = ImguiPage.Describe(window, p =&gt;
+    /// var page = Page.Describe(window, p =&gt;
     /// {
     ///     p.Label("Title");
     ///     p.TextField("Name");
     ///     p.Toggle("Enabled");
     /// });
     /// page.GetByLabel("Name").Fill("hello");
+    /// var text = page.GetByLabel("Name").ReadText();
     /// </code>
     /// </para>
     /// </summary>
-    public class ImguiPage
+    public class Page
     {
         private readonly EditorWindow _window;
-        private readonly List<ImguiControlInfo> _controls = new List<ImguiControlInfo>();
+        private readonly List<ControlInfo> _controls = new List<ControlInfo>();
+        private ILayoutResolver _resolver;
 
-        private ImguiPage(EditorWindow window)
+        private Page(EditorWindow window)
         {
             _window = window ?? throw new ArgumentNullException(nameof(window));
         }
 
         /// <summary>
-        /// Creates an <see cref="ImguiPage"/> for the given window using a fluent descriptor.
-        /// Control rects are computed synchronously from IMGUI layout constants.
+        /// Creates a <see cref="Page"/> for the given window using a fluent descriptor.
+        /// Automatically detects whether the window uses IMGUI or UIElements
+        /// and selects the appropriate layout resolver.
         /// </summary>
-        public static ImguiPage Describe(EditorWindow window, Action<ImguiPage> configure)
+        public static Page Describe(EditorWindow window, Action<Page> configure)
         {
             if (configure == null) throw new ArgumentNullException(nameof(configure));
 
-            var page = new ImguiPage(window);
+            var page = new Page(window);
             configure(page);
-            LayoutCalculator.Resolve(window, page._controls);
+            page._resolver = DetectResolver(window);
+            page._resolver.Resolve(window, page._controls);
+            return page;
+        }
+
+        /// <summary>
+        /// Creates a <see cref="Page"/> with an explicit <see cref="ILayoutResolver"/>.
+        /// Use when the auto-detection does not suit your window.
+        /// </summary>
+        public static Page Describe(EditorWindow window, Action<Page> configure, ILayoutResolver resolver)
+        {
+            if (configure == null) throw new ArgumentNullException(nameof(configure));
+            if (resolver == null) throw new ArgumentNullException(nameof(resolver));
+
+            var page = new Page(window);
+            configure(page);
+            page._resolver = resolver;
+            page._resolver.Resolve(window, page._controls);
             return page;
         }
 
         /// <summary>All described controls with their computed rects.</summary>
-        public IReadOnlyList<ImguiControlInfo> Controls => _controls;
+        public IReadOnlyList<ControlInfo> Controls => _controls;
 
         /// <summary>The target window this page describes.</summary>
         public EditorWindow Window => _window;
 
         // ── Builder methods ─────────────────────────────────────────
 
-        /// <summary>Describes a <c>GUILayout.Label</c> control.</summary>
-        public ImguiPage Label(string text, GUIStyle style = null)
+        /// <summary>Describes a Label control.</summary>
+        public Page Label(string text, GUIStyle style = null)
         {
-            _controls.Add(new ImguiControlInfo(text, ControlType.Label, customStyle: style));
+            _controls.Add(new ControlInfo(text, ControlType.Label, customStyle: style));
             return this;
         }
 
-        /// <summary>Describes an <c>EditorGUILayout.TextField</c> control.</summary>
-        public ImguiPage TextField(string label)
+        /// <summary>Describes a TextField control.</summary>
+        public Page TextField(string label)
         {
-            _controls.Add(new ImguiControlInfo(label, ControlType.TextField));
+            _controls.Add(new ControlInfo(label, ControlType.TextField));
             return this;
         }
 
-        /// <summary>Describes an <c>EditorGUILayout.Toggle</c> control.</summary>
-        public ImguiPage Toggle(string label)
+        /// <summary>Describes a Toggle control.</summary>
+        public Page Toggle(string label)
         {
-            _controls.Add(new ImguiControlInfo(label, ControlType.Toggle));
+            _controls.Add(new ControlInfo(label, ControlType.Toggle));
             return this;
         }
 
-        /// <summary>Describes an <c>EditorGUILayout.Slider</c> control.</summary>
-        public ImguiPage Slider(string label, float min = 0f, float max = 1f)
+        /// <summary>Describes a Slider control.</summary>
+        public Page Slider(string label, float min = 0f, float max = 1f)
         {
-            _controls.Add(new ImguiControlInfo(label, ControlType.Slider, sliderMin: min, sliderMax: max));
+            _controls.Add(new ControlInfo(label, ControlType.Slider, sliderMin: min, sliderMax: max));
             return this;
         }
 
-        /// <summary>Describes an <c>EditorGUILayout.BeginToggleGroup</c> control.</summary>
-        public ImguiPage BeginToggleGroup(string label)
+        /// <summary>Describes a BeginToggleGroup control.</summary>
+        public Page BeginToggleGroup(string label)
         {
-            _controls.Add(new ImguiControlInfo(label, ControlType.ToggleGroup));
+            _controls.Add(new ControlInfo(label, ControlType.ToggleGroup));
             return this;
         }
 
-        /// <summary>Describes an <c>EditorGUILayout.EndToggleGroup</c> call.</summary>
-        public ImguiPage EndToggleGroup()
+        /// <summary>Describes an EndToggleGroup call.</summary>
+        public Page EndToggleGroup()
         {
-            _controls.Add(new ImguiControlInfo(null, ControlType.EndToggleGroup));
+            _controls.Add(new ControlInfo(null, ControlType.EndToggleGroup));
             return this;
         }
 
-        /// <summary>Describes a <c>GUILayout.Button</c> control.</summary>
-        public ImguiPage Button(string text)
+        /// <summary>Describes a Button control.</summary>
+        public Page Button(string text)
         {
-            _controls.Add(new ImguiControlInfo(text, ControlType.Button));
+            _controls.Add(new ControlInfo(text, ControlType.Button));
             return this;
         }
 
-        /// <summary>Describes an <c>EditorGUILayout.IntField</c> control.</summary>
-        public ImguiPage IntField(string label)
+        /// <summary>Describes an IntField control.</summary>
+        public Page IntField(string label)
         {
-            _controls.Add(new ImguiControlInfo(label, ControlType.IntField));
+            _controls.Add(new ControlInfo(label, ControlType.IntField));
             return this;
         }
 
-        /// <summary>Describes an <c>EditorGUILayout.FloatField</c> control.</summary>
-        public ImguiPage FloatField(string label)
+        /// <summary>Describes a FloatField control.</summary>
+        public Page FloatField(string label)
         {
-            _controls.Add(new ImguiControlInfo(label, ControlType.FloatField));
+            _controls.Add(new ControlInfo(label, ControlType.FloatField));
             return this;
         }
 
         // ── Locator ─────────────────────────────────────────────────
 
         /// <summary>
-        /// Returns an <see cref="ImguiLocator"/> for the control with the given label.
+        /// Returns a <see cref="Locator"/> for the control with the given label.
         /// </summary>
         /// <exception cref="InvalidOperationException">No control with the given label was found.</exception>
-        public ImguiLocator GetByLabel(string label)
+        public Locator GetByLabel(string label)
         {
             if (label == null) throw new ArgumentNullException(nameof(label));
 
@@ -130,7 +152,7 @@ namespace UniEditWright
             {
                 if (_controls[i].Label == label)
                 {
-                    return new ImguiLocator(_window, _controls[i]);
+                    return new Locator(_window, _controls[i]);
                 }
             }
 
@@ -144,7 +166,29 @@ namespace UniEditWright
         /// </summary>
         public void Refresh()
         {
-            LayoutCalculator.Resolve(_window, _controls);
+            _resolver.Resolve(_window, _controls);
+        }
+
+        // ── Technology detection ────────────────────────────────────
+
+        private static ILayoutResolver DetectResolver(EditorWindow window)
+        {
+            var root = window.rootVisualElement;
+            if (root != null && HasUIElementsContent(root))
+                return new UIElementsResolver();
+
+            return new ImguiLayoutResolver();
+        }
+
+        private static bool HasUIElementsContent(VisualElement root)
+        {
+            if (root.childCount == 0) return false;
+            foreach (var child in root.Children())
+            {
+                if (!(child is IMGUIContainer))
+                    return true;
+            }
+            return false;
         }
 
         private string[] GetAvailableLabels()
