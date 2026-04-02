@@ -11,7 +11,15 @@ namespace UniEditWright
     /// Technology-agnostic: works for both IMGUI and UIElements windows.
     /// The target window requires zero modifications.
     /// <para>
-    /// Usage:
+    /// <b>Auto-discovery (recommended):</b>
+    /// <code>
+    /// var page = Page.Scan(window);
+    /// page.GetByValue("Hello World").Fill("new text");
+    /// page.GetByType(ControlType.Toggle, 0).Toggle();
+    /// </code>
+    /// </para>
+    /// <para>
+    /// <b>Manual descriptor (backward compat):</b>
     /// <code>
     /// var page = Page.Describe(window, p =&gt;
     /// {
@@ -20,7 +28,6 @@ namespace UniEditWright
     ///     p.Toggle("Enabled");
     /// });
     /// page.GetByLabel("Name").Fill("hello");
-    /// var text = page.GetByLabel("Name").ReadText();
     /// </code>
     /// </para>
     /// </summary>
@@ -29,6 +36,7 @@ namespace UniEditWright
         private readonly EditorWindow _window;
         private readonly List<ControlInfo> _controls = new List<ControlInfo>();
         private ILayoutResolver _resolver;
+        private bool _scanned;
 
         private Page(EditorWindow window)
         {
@@ -64,6 +72,41 @@ namespace UniEditWright
             configure(page);
             page._resolver = resolver;
             page._resolver.Resolve(window, page._controls);
+            return page;
+        }
+
+        /// <summary>
+        /// Auto-discovers controls by probing the window at runtime.
+        /// No manual descriptor needed — supports dynamic UIs.
+        /// <para>
+        /// <b>IMGUI windows:</b> Sends synthetic mouse events to find interactive
+        /// controls, reads text values via the clipboard. Window state is saved and
+        /// restored automatically (non-destructive).
+        /// </para>
+        /// <para>
+        /// <b>UIElements windows:</b> Queries the visual tree for known control types.
+        /// </para>
+        /// Call <see cref="Refresh"/> to re-scan after the UI changes.
+        /// </summary>
+        public static Page Scan(EditorWindow window)
+        {
+            if (window == null) throw new ArgumentNullException(nameof(window));
+
+            var page = new Page(window);
+            page._scanned = true;
+
+            var root = window.rootVisualElement;
+            if (root != null && HasUIElementsContent(root))
+            {
+                page._resolver = new UIElementsResolver();
+                page._resolver.Resolve(window, page._controls);
+            }
+            else
+            {
+                var discovered = ImguiProber.Probe(window);
+                page._controls.AddRange(discovered);
+            }
+
             return page;
         }
 
@@ -162,11 +205,75 @@ namespace UniEditWright
         }
 
         /// <summary>
-        /// Re-computes control rects. Call after the window has been resized.
+        /// Returns a <see cref="Locator"/> for the first control whose
+        /// <see cref="ControlInfo.Value"/> matches the given text.
+        /// Useful with <see cref="Scan"/> where labels are not available.
+        /// </summary>
+        public Locator GetByValue(string value)
+        {
+            if (value == null) throw new ArgumentNullException(nameof(value));
+
+            for (int i = 0; i < _controls.Count; i++)
+            {
+                if (_controls[i].Value == value)
+                    return new Locator(_window, _controls[i]);
+            }
+
+            throw new InvalidOperationException(
+                $"Control with value '{value}' not found. " +
+                $"Available values: [{string.Join(", ", GetAvailableValues())}]");
+        }
+
+        /// <summary>
+        /// Returns a <see cref="Locator"/> for the <paramref name="index"/>-th control
+        /// of the specified <paramref name="type"/> (zero-based).
+        /// </summary>
+        public Locator GetByType(ControlType type, int index = 0)
+        {
+            if (index < 0) throw new ArgumentOutOfRangeException(nameof(index));
+
+            int found = 0;
+            for (int i = 0; i < _controls.Count; i++)
+            {
+                if (_controls[i].Type == type)
+                {
+                    if (found == index)
+                        return new Locator(_window, _controls[i]);
+                    found++;
+                }
+            }
+
+            throw new InvalidOperationException(
+                $"Control of type {type} at index {index} not found " +
+                $"(found {found} total). Types present: [{string.Join(", ", GetAvailableTypes())}]");
+        }
+
+        /// <summary>
+        /// Re-computes control layout.
+        /// For <see cref="Describe"/> pages, re-applies the <see cref="ILayoutResolver"/>.
+        /// For <see cref="Scan"/> pages, re-probes the window (captures dynamic changes).
         /// </summary>
         public void Refresh()
         {
-            _resolver.Resolve(_window, _controls);
+            if (_scanned)
+            {
+                _controls.Clear();
+                var root = _window.rootVisualElement;
+                if (root != null && HasUIElementsContent(root))
+                {
+                    _resolver = new UIElementsResolver();
+                    _resolver.Resolve(_window, _controls);
+                }
+                else
+                {
+                    var discovered = ImguiProber.Probe(_window);
+                    _controls.AddRange(discovered);
+                }
+            }
+            else
+            {
+                _resolver.Resolve(_window, _controls);
+            }
         }
 
         // ── Technology detection ────────────────────────────────────
@@ -200,6 +307,27 @@ namespace UniEditWright
                     labels.Add(c.Label);
             }
             return labels.ToArray();
+        }
+
+        private string[] GetAvailableValues()
+        {
+            var values = new List<string>();
+            foreach (var c in _controls)
+            {
+                if (c.Value != null)
+                    values.Add(c.Value);
+            }
+            return values.ToArray();
+        }
+
+        private string[] GetAvailableTypes()
+        {
+            var seen = new HashSet<string>();
+            foreach (var c in _controls)
+                seen.Add(c.Type.ToString());
+            var arr = new string[seen.Count];
+            seen.CopyTo(arr);
+            return arr;
         }
     }
 }

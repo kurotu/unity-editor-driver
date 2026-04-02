@@ -12,8 +12,8 @@ Works with both IMGUI and UIElements (UI Toolkit) windows.
 - **Editor/Core/**: `EditorDriver` (window lifecycle), `WindowHandle` (interaction wrapper)
 - **Editor/Input/**: `InputSimulator` (synthetic Event creation and dispatch, including IMGUI command events)
 - **Editor/Screenshot/**: `ScreenshotCapture` (window capture to PNG)
-- **Editor/Page/**: `Page` (technology-agnostic control descriptor), `Locator` (Playwright-like interaction), `ILayoutResolver` interface, `ImguiLayoutResolver` (IMGUI rect computation), `UIElementsResolver` (visual tree queries), `ControlInfo` (control metadata)
-- **Tests/Editor/**: NUnit EditMode tests (59 tests)
+- **Editor/Page/**: `Page` (technology-agnostic control descriptor), `Locator` (Playwright-like interaction), `ILayoutResolver` interface, `ImguiLayoutResolver` (IMGUI rect computation), `UIElementsResolver` (visual tree queries), `ImguiProber` (auto-discovery via SendEvent probing), `ControlInfo` (control metadata)
+- **Tests/Editor/**: NUnit EditMode tests (69 tests)
 
 ### Sample Window: `Assets/Editor/MyWindow.cs`
 - Example EditorWindow using **plain IMGUI** (no framework dependency)
@@ -57,17 +57,35 @@ uloop run-tests --filter-type exact --filter-value "UniEditWright.Tests.PageTest
 ## Page Usage Guide (Non-Invasive E2E Testing)
 To E2E test any EditorWindow **without modifying it**:
 
-1. Open the window via `EditorDriver`
-2. Describe its layout with `Page.Describe` (auto-detects IMGUI vs UIElements)
-3. Interact via `Locator` (black-box: ReadText, Fill, Toggle, SetSlider, CaptureScreenshot)
+### Auto-Discovery with `Page.Scan` (Recommended)
+No manual descriptor needed — works with dynamic UIs where controls appear/disappear.
 
 ```csharp
-// The target window uses plain IMGUI — no framework dependency
-// void OnGUI() { EditorGUILayout.TextField("Name", name); ... }
-
 var handle = driver.OpenWindow<MyWindow>();
 yield return null;
 
+// Auto-discover all interactive controls
+var page = Page.Scan(handle.Window);
+
+// Find controls by displayed text value
+var textField = page.GetByValue("Hello World");
+var text = textField.ReadText();
+textField.Fill("new value");
+
+// Find controls by type (zero-based index)
+page.GetByType(ControlType.Toggle, 0).Toggle();
+
+// After UI changes, re-scan to discover new controls
+page.Refresh();
+var newControls = page.Controls; // IReadOnlyList<ControlInfo>
+```
+
+**How it works (IMGUI):** Sends synthetic mouse events at vertical intervals, checks `GUIUtility.keyboardControl` to find interactive regions, reads text via clipboard. Window state is saved/restored automatically (non-destructive).
+
+### Manual Descriptor with `Page.Describe`
+When you know the exact layout and need label-based access:
+
+```csharp
 var page = Page.Describe(handle.Window, p =>
 {
     p.Label("Base Settings", EditorStyles.boldLabel);
@@ -78,11 +96,25 @@ var page = Page.Describe(handle.Window, p =>
     p.EndToggleGroup();
 });
 
-// Read displayed text (clipboard-based, no reflection)
-var text = page.GetByLabel("Text Field").ReadText();
-
-// Interact
+// Find by label name
 page.GetByLabel("Text Field").Fill("new value");
 page.GetByLabel("Optional Settings").Toggle();
-page.GetByLabel("Slider").SetSlider(0.5f);
 ```
+
+### Locator API
+| Method | Description |
+|--------|-------------|
+| `ReadText()` | Read displayed text via clipboard (SelectAll → Copy) |
+| `Fill(string)` | Clear field and type new text |
+| `Toggle()` | Click a toggle/checkbox control |
+| `SetSlider(float)` | Set slider value (type into numeric field) |
+| `CaptureScreenshot(path)` | Save control area as PNG |
+
+### Page Query API
+| Method | Works with | Description |
+|--------|-----------|-------------|
+| `GetByLabel(string)` | `Describe` | Find control by IMGUI/UIElements label |
+| `GetByValue(string)` | `Scan` | Find control by displayed text value |
+| `GetByType(ControlType, int)` | Both | Find Nth control of a given type |
+| `Controls` | Both | Read-only list of all discovered controls |
+| `Refresh()` | Both | Re-compute layout / re-scan for dynamic changes |
