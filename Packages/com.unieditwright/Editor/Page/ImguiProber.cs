@@ -21,6 +21,29 @@ namespace UniEditWright
             public bool EventUsed;
         }
 
+        // Cached reflection access to GUIUtility.s_LastControlID.
+        // Resetting this before each probe gives every probe the same starting ID,
+        // so the same control always gets the same keyboardControl value and MergeRegions
+        // can group hits reliably.
+        private static FieldInfo _lastControlIdField;
+        private static bool _lastControlIdSearched;
+
+        private static void ResetControlIdCounter()
+        {
+            if (!_lastControlIdSearched)
+            {
+                _lastControlIdSearched = true;
+                _lastControlIdField = typeof(GUIUtility).GetField(
+                    "s_LastControlID",
+                    BindingFlags.Static | BindingFlags.NonPublic);
+            }
+            // Reset to a large value far from any ID that existing IMGUI state
+            // (hotControl, keyboardControl, TextEditor focus, etc.) might reference.
+            // Resetting to 0 would collide with small existing IDs and cause phantom
+            // controls when a text field has keyboard focus between probes.
+            _lastControlIdField?.SetValue(null, 1_000_000);
+        }
+
         /// <summary>
         /// Probes the window and returns a list of auto-discovered controls.
         /// Controls are classified as <see cref="ControlType.TextField"/> (editable text)
@@ -32,20 +55,18 @@ namespace UniEditWright
             float windowW = window.position.width;
             float windowH = window.position.height + contentY;
 
-            // Save window state so probing is non-destructive
+            // Probe at the float-field zone: last fieldWidth/2 px from the right.
+            // This reliably hits both TextField input areas AND Slider float fields,
+            // while staying clear of the slider track in the middle.
+            float probeX = windowW - EditorGUIUtility.fieldWidth / 2f;
+
             var snapshot = SaveState(window);
 
             try
             {
-                // Phase 1: vertical scan to find interactive regions
-                var hits = ScanVertical(window, contentY, windowH, windowW, snapshot);
-
-                // Phase 2: merge hits into control regions
-                var regions = MergeRegions(hits, windowW, contentY);
-
-                // Phase 3: read text values for field-type controls
-                ReadTextValues(window, regions, snapshot);
-
+                var hits = ScanVertical(window, contentY, windowH, probeX, snapshot);
+                var regions = MergeRegions(hits, windowW);
+                ReadTextValues(window, regions, probeX, snapshot);
                 return regions;
             }
             finally
@@ -56,26 +77,61 @@ namespace UniEditWright
             }
         }
 
+        /// <summary>
+        /// Clears the IMGUI RecycledEditor's controlID.
+        /// After Fill/ReadText, EditorGUI.s_RecycledEditor retains a stale controlID
+        /// that matches the previously focused TextField's IMGUI ID.  On the next probe,
+        /// the TextField sees the matching ID and reclaims keyboard focus even though the
+        /// mouse is not inside its rect — producing phantom kbCtrl captures at unrelated
+        /// y-positions (e.g. y=21 where only a Label exists).  Setting controlID=0 breaks
+        /// the match and prevents the phantom.
+        /// </summary>
+        private static void ClearRecycledEditorState()
+        {
+            try
+            {
+                var field = typeof(EditorGUI).GetField(
+                    "s_RecycledEditor",
+                    BindingFlags.Static | BindingFlags.NonPublic);
+                var editor = field?.GetValue(null) as TextEditor;
+                if (editor == null) return;
+
+                // Use direct assignment — TextEditor.controlID is a public field/property.
+                // Reflection-based GetField("controlID") can silently return null in some
+                // Unity versions (when the backing member is a property, not a bare field),
+                // leaving the stale ID intact and re-enabling phantom focus reclaims.
+                editor.controlID = 0;
+            }
+            catch { }
+        }
+
         // ── Phase 1: Vertical scan ─────────────────────────────────
 
         private static List<ProbeHit> ScanVertical(
-            EditorWindow window, float startY, float endY, float windowW,
+            EditorWindow window, float startY, float endY, float probeX,
             (FieldInfo field, object value)[] snapshot)
         {
-            // Step size: half of singleLineHeight to guarantee hitting each control
+            // Step ≤ singleLineHeight/2 so every control gets at least one probe.
             float step = Mathf.Max(EditorGUIUtility.singleLineHeight / 2f, 4f);
-            float probeX = windowW * 0.75f;
 
             var hits = new List<ProbeHit>();
 
             for (float y = startY; y < endY; y += step)
             {
-                // Restore state before each probe so toggle clicks don't affect
-                // subsequent probes (each probe sees the original window state).
                 RestoreState(window, snapshot);
-
                 GUIUtility.keyboardControl = 0;
                 GUIUtility.hotControl = 0;
+
+                // Clear stale RecycledEditor state before each probe event.
+                // After Fill/ReadText, EditorGUI.s_RecycledEditor retains a stale
+                // controlID that can cause phantom focus captures when the ID counter
+                // is reset. Clearing it here prevents phantom Toggle/TextField hits
+                // at unexpected y-positions (e.g. y=21 where only a Label exists).
+                ClearRecycledEditorState();
+
+                // Reset the IMGUI control-ID counter so every probe produces the
+                // same IDs for the same controls, enabling reliable grouping.
+                ResetControlIdCounter();
 
                 var md = new Event { type = EventType.MouseDown };
                 md.mousePosition = new Vector2(probeX, y);
@@ -100,8 +156,7 @@ namespace UniEditWright
 
         // ── Phase 2: Merge into regions ─────────────────────────────
 
-        private static List<ControlInfo> MergeRegions(
-            List<ProbeHit> hits, float windowW, float contentY)
+        private static List<ControlInfo> MergeRegions(List<ProbeHit> hits, float windowW)
         {
             var controls = new List<ControlInfo>();
             float lineHeight = EditorGUIUtility.singleLineHeight;
@@ -111,19 +166,20 @@ namespace UniEditWright
             {
                 var hit = hits[i];
 
-                // Skip non-interactive positions
                 if (hit.KeyboardControl == 0 && !hit.EventUsed)
                 {
                     i++;
                     continue;
                 }
 
-                // Found an interactive position — find the region extent
                 int kbCtrl = hit.KeyboardControl;
                 bool used = hit.EventUsed;
                 float startY = hit.Y;
                 float endY = hit.Y;
 
+                // Extend region while consecutive hits share the same kbCtrl+used pair.
+                // Because the ID counter is reset before each probe, the same control
+                // reliably yields the same kbCtrl value on every probe.
                 int j = i + 1;
                 while (j < hits.Count &&
                        hits[j].KeyboardControl == kbCtrl &&
@@ -133,37 +189,26 @@ namespace UniEditWright
                     j++;
                 }
 
-                // Skip tiny regions (< half a control height) — likely noise
-                if (endY - startY < lineHeight / 3f)
-                {
-                    i = j;
-                    continue;
-                }
-
-                // Determine type
                 ControlType type;
-                if (kbCtrl > 0)
-                {
-                    // Keyboard-capturing: either text field or toggle.
-                    // We'll distinguish in Phase 3 by trying ReadText.
-                    type = ControlType.TextField;
-                }
-                else if (used)
-                {
+                if (kbCtrl > 0 && used)
+                    // Real interactive control: event was consumed AND keyboard focus was
+                    // captured.  Requires BOTH conditions because stale keyboardControl
+                    // values can persist across SendEvent calls (phantom kbCtrl), but
+                    // those phantom hits always have EventUsed=false.
+                    type = ControlType.TextField;   // distinguished in Phase 3
+                else if (kbCtrl == 0 && used)
                     type = ControlType.Button;
-                }
                 else
                 {
+                    // kbCtrl > 0 but event NOT used → phantom from stale focus state.
+                    // kbCtrl == 0 and not used → empty space.  Either way: skip.
                     i = j;
                     continue;
                 }
 
-                // Build rect — clamp to singleLineHeight if the region is taller
-                float rectY = startY;
+                // Snap region height to at most one singleLineHeight
                 float height = Mathf.Min(endY - startY + lineHeight / 2f, lineHeight);
-                var rect = new Rect(0, rectY, windowW, height);
-
-                controls.Add(new ControlInfo(type, rect));
+                controls.Add(new ControlInfo(type, new Rect(0, startY, windowW, height)));
                 i = j;
             }
 
@@ -174,7 +219,7 @@ namespace UniEditWright
 
         private static void ReadTextValues(
             EditorWindow window, List<ControlInfo> controls,
-            (FieldInfo field, object value)[] snapshot)
+            float probeX, (FieldInfo field, object value)[] snapshot)
         {
             foreach (var control in controls)
             {
@@ -183,9 +228,9 @@ namespace UniEditWright
                 RestoreState(window, snapshot);
                 GUIUtility.keyboardControl = 0;
                 GUIUtility.hotControl = 0;
+                ClearRecycledEditorState();
+                ResetControlIdCounter();
 
-                // Click the control's field area
-                float probeX = control.Rect.x + control.Rect.width * 0.75f;
                 float probeY = control.Rect.y + control.Rect.height / 2f;
 
                 var md = new Event { type = EventType.MouseDown };
@@ -200,13 +245,12 @@ namespace UniEditWright
 
                 if (GUIUtility.keyboardControl == 0)
                 {
-                    // Couldn't focus — might be a clickable, not a text field
+                    // No keyboard capture → not a focusable text control
                     control.Type = ControlType.Toggle;
                     control.Value = null;
                     continue;
                 }
 
-                // SelectAll + Copy via clipboard
                 string savedClip = GUIUtility.systemCopyBuffer;
                 GUIUtility.systemCopyBuffer = "";
 
@@ -224,7 +268,6 @@ namespace UniEditWright
 
                 if (string.IsNullOrEmpty(text))
                 {
-                    // No text → this is a toggle/checkbox, not a text field
                     control.Type = ControlType.Toggle;
                     control.Value = null;
                 }
@@ -258,7 +301,7 @@ namespace UniEditWright
                 field.SetValue(window, value);
         }
 
-        // ── Tab-bar offset (shared with ImguiLayoutResolver) ────────
+        // ── Tab-bar offset ──────────────────────────────────────────
 
         private static float GetContentYOffset(EditorWindow window)
         {

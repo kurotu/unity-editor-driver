@@ -15,8 +15,13 @@ namespace UniEditWright.Tests
         [SetUp]
         public void SetUp()
         {
-            _window = EditorWindow.GetWindow<TestPlainWindow>();
-            _window.Show();
+            // Use CreateInstance + ShowUtility so the window is always a non-dockable
+            // floating window at a known size.  GetWindow<T>() can return a previously
+            // docked window whose position cannot be changed by assigning .position,
+            // which would break Refresh_RecomputesRects.
+            _window = ScriptableObject.CreateInstance<TestPlainWindow>();
+            _window.position = new Rect(100, 100, 400, 300);
+            _window.ShowUtility();
         }
 
         [TearDown]

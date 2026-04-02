@@ -15,8 +15,13 @@ namespace UniEditWright
 
         public WindowHandle OpenWindow<T>() where T : EditorWindow
         {
-            var window = EditorWindow.GetWindow<T>();
-            window.Show();
+            // Always create a fresh instance so each test starts with default field values.
+            // GetWindow<T>() would return an existing (possibly stale) window from a
+            // previous test, causing tests to see unexpected initial state.
+            // ShowUtility() makes it a floating non-dockable window so that
+            // window.position = ... takes effect immediately for resize tests.
+            var window = ScriptableObject.CreateInstance<T>();
+            window.ShowUtility();
             _openedWindows.Add(window);
             return new WindowHandle(window);
         }
