@@ -3,7 +3,8 @@
     "rootNamespace": "UniEditWright.Tests",
     "references": [
         "UniEditWright.Editor",
-        "SampleWindows.Editor"
+        "SampleWindows.Editor",
+        "SampleWindows.Runtime"
     ],
     "includePlatforms": [
         "Editor"

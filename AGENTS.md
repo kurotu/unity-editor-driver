@@ -2,22 +2,26 @@
 
 ## Project Overview
 UniEditWright is an E2E testing framework for Unity Editor extensions.
-It provides a Playwright-like API for automating EditorWindow interactions and capturing screenshots.
-**No modifications to the target EditorWindow code are required.**
+It provides a Playwright-like API for automating EditorWindow and custom Inspector interactions and capturing screenshots.
+**No modifications to the target EditorWindow or Inspector code are required.**
 Works with both IMGUI and UIElements (UI Toolkit) windows.
 
 ## Architecture
 
 ### Package: `Packages/com.unieditwright/`
-- **Editor/Core/**: `EditorDriver` (window lifecycle), `WindowHandle` (interaction wrapper)
+- **Editor/Core/**: `EditorDriver` (window & inspector lifecycle), `WindowHandle` (window interaction wrapper), `InspectorHandle` (inspector interaction wrapper), `InspectorHostWindow` (hosts a single Editor in isolation)
 - **Editor/Input/**: `InputSimulator` (synthetic Event creation and dispatch, including IMGUI command events)
 - **Editor/Screenshot/**: `ScreenshotCapture` (window capture to PNG)
 - **Editor/Page/**: `Page` (technology-agnostic control descriptor), `Locator` (Playwright-like interaction), `ILayoutResolver` interface, `ImguiLayoutResolver` (IMGUI rect computation), `UIElementsResolver` (visual tree queries), `ImguiProber` (auto-discovery via SendEvent probing), `ControlInfo` (control metadata)
-- **Tests/Editor/**: NUnit EditMode tests (69 tests)
+- **Tests/Editor/**: NUnit EditMode tests (81 tests)
 
 ### Sample Window: `Assets/Editor/MyWindow.cs`
 - Example EditorWindow using **plain IMGUI** (no framework dependency)
 - Assembly: `SampleWindows.Editor` (no reference to UniEditWright)
+
+### Sample Component + Inspector: `Assets/Runtime/MyComponent.cs` + `Assets/Editor/MyComponentEditor.cs`
+- Example MonoBehaviour with a custom IMGUI inspector (no framework dependency)
+- Assemblies: `SampleWindows.Runtime` (component) + `SampleWindows.Editor` (inspector)
 
 ## Conventions
 
@@ -118,3 +122,53 @@ page.GetByLabel("Optional Settings").Toggle();
 | `GetByType(ControlType, int)` | Both | Find Nth control of a given type |
 | `Controls` | Both | Read-only list of all discovered controls |
 | `Refresh()` | Both | Re-compute layout / re-scan for dynamic changes |
+
+## Inspector Usage Guide (Non-Invasive E2E Testing)
+To E2E test any custom Inspector (Editor subclass) **without modifying it**:
+
+### Opening an Inspector
+`EditorDriver.OpenInspector<TComponent>()` creates a temporary GameObject, adds the component, creates the custom Editor, and hosts it in an isolated window.
+
+```csharp
+var driver = new EditorDriver();
+var handle = driver.OpenInspector<MyComponent>();
+yield return null;
+
+// With explicit editor type
+var handle2 = driver.OpenInspector<MyComponent, MyComponentEditor>();
+```
+
+### InspectorHandle API
+`InspectorHandle` provides the same interaction surface as `WindowHandle`:
+
+| Property / Method | Description |
+|-------------------|-------------|
+| `Window` | The host EditorWindow (pass to `Page.Scan`) |
+| `Editor` | The custom `UnityEditor.Editor` instance |
+| `Component` | The target Component |
+| `GameObject` | The temporary GameObject |
+| `Screenshot(path)` | Capture screenshot |
+| `Repaint()` | Force repaint |
+
+### Using Page.Scan with Inspectors
+Works identically to EditorWindow — pass `handle.Window`:
+
+```csharp
+var handle = driver.OpenInspector<MyComponent>();
+yield return null;
+
+var page = Page.Scan(handle.Window);
+page.GetByValue("Hello World").Fill("new text");
+page.GetByType(ControlType.Toggle, 0).Toggle();
+handle.Repaint();
+yield return null;
+
+page.Refresh();
+```
+
+### Cleanup
+```csharp
+driver.CloseInspector(handle);  // Destroys window + GameObject
+driver.CloseAll();              // Cleans up all windows and GameObjects
+driver.Dispose();               // Same as CloseAll (IDisposable)
+```

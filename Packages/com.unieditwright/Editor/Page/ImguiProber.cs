@@ -109,7 +109,7 @@ namespace UniEditWright
 
         private static List<ProbeHit> ScanVertical(
             EditorWindow window, float startY, float endY, float probeX,
-            (FieldInfo field, object value)[] snapshot)
+            FieldSnapshot[] snapshot)
         {
             // Step ≤ singleLineHeight/2 so every control gets at least one probe.
             float step = Mathf.Max(EditorGUIUtility.singleLineHeight / 2f, 4f);
@@ -219,7 +219,7 @@ namespace UniEditWright
 
         private static void ReadTextValues(
             EditorWindow window, List<ControlInfo> controls,
-            float probeX, (FieldInfo field, object value)[] snapshot)
+            float probeX, FieldSnapshot[] snapshot)
         {
             foreach (var control in controls)
             {
@@ -280,25 +280,52 @@ namespace UniEditWright
 
         // ── State save/restore ──────────────────────────────────────
 
-        private static (FieldInfo field, object value)[] SaveState(EditorWindow window)
+        private struct FieldSnapshot
         {
-            var type = window.GetType();
+            public object Target;
+            public FieldInfo Field;
+            public object Value;
+        }
+
+        private static FieldSnapshot[] SaveState(EditorWindow window)
+        {
+            var snapshots = new List<FieldSnapshot>();
+            AddObjectFields(window, snapshots);
+
+            // For InspectorHostWindow, also snapshot the editor's target (the Component)
+            // so that probing doesn't permanently mutate component state.
+            if (window is InspectorHostWindow host &&
+                host.HostedEditor != null && host.HostedEditor.target != null)
+            {
+                AddObjectFields(host.HostedEditor.target, snapshots);
+            }
+
+            return snapshots.ToArray();
+        }
+
+        private static void AddObjectFields(object target, List<FieldSnapshot> snapshots)
+        {
+            var type = target.GetType();
             var fields = type.GetFields(
                 BindingFlags.Instance | BindingFlags.Public |
                 BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
 
-            var snapshot = new (FieldInfo, object)[fields.Length];
-            for (int i = 0; i < fields.Length; i++)
-                snapshot[i] = (fields[i], fields[i].GetValue(window));
-
-            return snapshot;
+            foreach (var field in fields)
+            {
+                snapshots.Add(new FieldSnapshot
+                {
+                    Target = target,
+                    Field = field,
+                    Value = field.GetValue(target)
+                });
+            }
         }
 
         private static void RestoreState(
-            EditorWindow window, (FieldInfo field, object value)[] snapshot)
+            EditorWindow window, FieldSnapshot[] snapshot)
         {
-            foreach (var (field, value) in snapshot)
-                field.SetValue(window, value);
+            foreach (var s in snapshot)
+                s.Field.SetValue(s.Target, s.Value);
         }
 
         // ── Tab-bar offset ──────────────────────────────────────────

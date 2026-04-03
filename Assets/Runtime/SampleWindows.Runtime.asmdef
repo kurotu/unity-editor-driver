@@ -1,12 +1,8 @@
 {
-    "name": "SampleWindows.Editor",
+    "name": "SampleWindows.Runtime",
     "rootNamespace": "",
-    "references": [
-        "SampleWindows.Runtime"
-    ],
-    "includePlatforms": [
-        "Editor"
-    ],
+    "references": [],
+    "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,

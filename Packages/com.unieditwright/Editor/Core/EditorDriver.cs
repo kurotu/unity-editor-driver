@@ -7,11 +7,12 @@ namespace UniEditWright
 {
     /// <summary>
     /// Main entry point for UniEditWright E2E testing.
-    /// Manages editor window lifecycle.
+    /// Manages editor window and inspector lifecycle.
     /// </summary>
     public class EditorDriver : IDisposable
     {
         private readonly List<EditorWindow> _openedWindows = new List<EditorWindow>();
+        private readonly List<GameObject> _createdGameObjects = new List<GameObject>();
 
         public WindowHandle OpenWindow<T>() where T : EditorWindow
         {
@@ -24,6 +25,45 @@ namespace UniEditWright
             window.ShowUtility();
             _openedWindows.Add(window);
             return new WindowHandle(window);
+        }
+
+        /// <summary>
+        /// Opens a custom inspector for a Component in an isolated host window.
+        /// Creates a temporary GameObject, adds <typeparamref name="TComponent"/>,
+        /// and lets Unity select the default custom Editor.
+        /// </summary>
+        public InspectorHandle OpenInspector<TComponent>() where TComponent : Component
+        {
+            return OpenInspectorInternal<TComponent>(null);
+        }
+
+        /// <summary>
+        /// Opens a specific custom inspector for a Component in an isolated host window.
+        /// Creates a temporary GameObject, adds <typeparamref name="TComponent"/>,
+        /// and uses <typeparamref name="TEditor"/> as the inspector.
+        /// </summary>
+        public InspectorHandle OpenInspector<TComponent, TEditor>()
+            where TComponent : Component
+            where TEditor : Editor
+        {
+            return OpenInspectorInternal<TComponent>(typeof(TEditor));
+        }
+
+        public void CloseInspector(InspectorHandle handle)
+        {
+            if (handle == null) throw new ArgumentNullException(nameof(handle));
+            var window = handle.Window;
+            var go = handle.GameObject;
+            _openedWindows.Remove(window);
+            _createdGameObjects.Remove(go);
+            if (window != null)
+            {
+                window.Close();
+            }
+            if (go != null)
+            {
+                UnityEngine.Object.DestroyImmediate(go);
+            }
         }
 
         public void CloseWindow(WindowHandle handle)
@@ -48,11 +88,42 @@ namespace UniEditWright
                 }
             }
             _openedWindows.Clear();
+
+            for (int i = _createdGameObjects.Count - 1; i >= 0; i--)
+            {
+                var go = _createdGameObjects[i];
+                if (go != null)
+                {
+                    UnityEngine.Object.DestroyImmediate(go);
+                }
+            }
+            _createdGameObjects.Clear();
         }
 
         public void Dispose()
         {
             CloseAll();
+        }
+
+        private InspectorHandle OpenInspectorInternal<TComponent>(Type editorType)
+            where TComponent : Component
+        {
+            var go = new GameObject($"UniEditWright_Inspector_{typeof(TComponent).Name}");
+            go.hideFlags = HideFlags.HideAndDontSave;
+            _createdGameObjects.Add(go);
+
+            var component = go.AddComponent<TComponent>();
+
+            var editor = editorType != null
+                ? Editor.CreateEditor(component, editorType)
+                : Editor.CreateEditor(component);
+
+            var hostWindow = ScriptableObject.CreateInstance<InspectorHostWindow>();
+            hostWindow.SetEditor(editor);
+            hostWindow.ShowUtility();
+            _openedWindows.Add(hostWindow);
+
+            return new InspectorHandle(hostWindow, go, editor);
         }
     }
 }
