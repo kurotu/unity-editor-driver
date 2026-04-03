@@ -126,7 +126,7 @@ namespace UniEditWright.Tests
             int countBefore = page.Controls.Count;
 
             // Enable the toggle group
-            page.GetByType(ControlType.Toggle, 0).Toggle();
+            page.GetByType(ControlType.Toggle, 1).Toggle();
             handle.Repaint();
             yield return null;
 
@@ -144,7 +144,7 @@ namespace UniEditWright.Tests
             yield return null;
 
             var page = Page.Scan(handle.Window);
-            page.GetByType(ControlType.Toggle, 0).Toggle();
+            page.GetByType(ControlType.Toggle, 1).Toggle();
             handle.Repaint();
             yield return null;
 
@@ -154,6 +154,51 @@ namespace UniEditWright.Tests
             var slider = page.GetByValue("1.23");
             Assert.IsNotNull(slider);
             Assert.Greater(slider.Rect.width, 0);
+        }
+
+        // ── ObjectField ──────────────────────────────────────────────
+
+        [UnityTest]
+        public IEnumerator Scan_ObjectField_IsDiscoverable()
+        {
+            var handle = _driver.OpenWindow<MyWindow>();
+            yield return null;
+
+            var page = Page.Scan(handle.Window);
+
+            var objField = page.GetByType(ControlType.ObjectField, 0);
+            Assert.IsNotNull(objField);
+            Assert.AreEqual(ControlType.ObjectField, objField.ControlType);
+            Assert.Greater(objField.Rect.width, 0);
+            Assert.Greater(objField.Rect.height, 0);
+        }
+
+        [UnityTest]
+        public IEnumerator Scan_ObjectField_ClickDoesNotThrow()
+        {
+            var handle = _driver.OpenWindow<MyWindow>();
+            yield return null;
+
+            var page = Page.Scan(handle.Window);
+
+            Assert.DoesNotThrow(() =>
+                page.GetByType(ControlType.ObjectField, 0).Click());
+        }
+
+        [UnityTest]
+        public IEnumerator Scan_ObjectField_CaptureScreenshot()
+        {
+            var handle = _driver.OpenWindow<MyWindow>();
+            yield return null;
+
+            var page = Page.Scan(handle.Window);
+            var objField = page.GetByType(ControlType.ObjectField, 0);
+
+            var tex = objField.CaptureScreenshot();
+            Assert.IsNotNull(tex);
+            Assert.Greater(tex.width, 0);
+            Assert.Greater(tex.height, 0);
+            UnityEngine.Object.DestroyImmediate(tex);
         }
 
         // ── Full workflow ───────────────────────────────────────────
@@ -181,7 +226,7 @@ namespace UniEditWright.Tests
             Assert.AreEqual("Black Box Test", page.GetByValue("Black Box Test").ReadText());
 
             // 5. Enable toggle group
-            page.GetByType(ControlType.Toggle, 0).Toggle();
+            page.GetByType(ControlType.Toggle, 1).Toggle();
             handle.Repaint();
             yield return null;
 

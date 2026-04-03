@@ -7,6 +7,8 @@ public class MyWindow : EditorWindow
     bool groupEnabled;
     bool myBool = true;
     float myFloat = 1.23f;
+    Material myMaterial;
+    Texture myTexture;
 
     // Add menu named "My Window" to the Window menu
     [MenuItem("Window/My Window")]
@@ -21,6 +23,8 @@ public class MyWindow : EditorWindow
     {
         GUILayout.Label("Base Settings", EditorStyles.boldLabel);
         myString = EditorGUILayout.TextField("Text Field", myString);
+        myMaterial = (Material)EditorGUILayout.ObjectField("Material", myMaterial, typeof(Material), false);
+        myTexture = (Texture)EditorGUILayout.ObjectField("Texture", myTexture, typeof(Texture), false);
 
         groupEnabled = EditorGUILayout.BeginToggleGroup("Optional Settings", groupEnabled);
         myBool = EditorGUILayout.Toggle("Toggle", myBool);

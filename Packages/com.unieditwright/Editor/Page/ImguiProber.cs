@@ -67,6 +67,7 @@ namespace UniEditWright
                 var hits = ScanVertical(window, contentY, windowH, probeX, snapshot);
                 var regions = MergeRegions(hits, windowW);
                 ReadTextValues(window, regions, probeX, snapshot);
+                DetectObjectFields(window, contentY, windowH, windowW, regions, snapshot);
                 return regions;
             }
             finally
@@ -276,6 +277,73 @@ namespace UniEditWright
                     control.Value = text;
                 }
             }
+
+        }
+
+        // ── Phase 4: Detect ObjectField via label-area scan ────────
+
+        /// <summary>
+        /// ObjectField with a null value does not consume MouseDown events in the
+        /// field area, making it invisible to the primary scan at probeX.
+        /// However, clicking in the label area (x ≈ 20) still sets keyboard focus
+        /// to a unique control ID for each ObjectField.
+        /// By scanning at a label-area X and looking for kbCtrl transitions that
+        /// do not overlap with any already-detected control, we can identify
+        /// ObjectField positions.
+        /// </summary>
+        private static void DetectObjectFields(
+            EditorWindow window, float startY, float endY, float windowW,
+            List<ControlInfo> controls, FieldSnapshot[] snapshot)
+        {
+            float labelX = 20f;
+            var labelHits = ScanVertical(window, startY, endY, labelX, snapshot);
+
+            float lineHeight = EditorGUIUtility.singleLineHeight;
+
+            // Initialise prevKb from the first probe rather than 0.
+            // After Phase 3 (ReadTextValues sends SelectAll / Copy), IMGUI native
+            // state retains the TextField's kbCtrl — this is not clearable from
+            // managed code.  A fresh OnGUI pass then re-applies that kbCtrl even
+            // when the mouse is in empty space, creating a spurious transition
+            // from 0 → textFieldKb at the very first probe.
+            // Using the first probe's value as baseline eliminates the phantom.
+            int prevKb = labelHits.Count > 0 ? labelHits[0].KeyboardControl : 0;
+
+            for (int i = 0; i < labelHits.Count; i++)
+            {
+                var hit = labelHits[i];
+
+                if (hit.KeyboardControl > 0 && hit.KeyboardControl != prevKb)
+                {
+                    // kbCtrl transition → potential new control at this Y.
+                    float controlY = hit.Y;
+
+                    // Check if this Y falls inside any existing control's rect.
+                    bool overlaps = false;
+                    foreach (var ctrl in controls)
+                    {
+                        if (controlY >= ctrl.Rect.y &&
+                            controlY < ctrl.Rect.y + ctrl.Rect.height)
+                        {
+                            overlaps = true;
+                            break;
+                        }
+                    }
+
+                    if (!overlaps)
+                    {
+                        float height = Mathf.Min(lineHeight, endY - controlY);
+                        controls.Add(new ControlInfo(
+                            ControlType.ObjectField,
+                            new Rect(0, controlY, windowW, height)));
+                    }
+                }
+
+                prevKb = hit.KeyboardControl;
+            }
+
+            // Sort controls by Y position for consistent ordering.
+            controls.Sort((a, b) => a.Rect.y.CompareTo(b.Rect.y));
         }
 
         // ── State save/restore ──────────────────────────────────────

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEditor;
+using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -102,6 +103,14 @@ namespace UniEditWright
                 return;
             }
 
+            if (element is UnityEditor.UIElements.ObjectField of)
+            {
+                var info = new ControlInfo(ControlType.ObjectField, of.worldBound);
+                info.Label = of.label;
+                controls.Add(info);
+                return;
+            }
+
             if (element is Button btn)
             {
                 var info = new ControlInfo(ControlType.Button, btn.worldBound, btn.text);
@@ -137,6 +146,8 @@ namespace UniEditWright
                     return root.Query<IntegerField>().Where(e => e.label == label).First();
                 case ControlType.FloatField:
                     return root.Query<FloatField>().Where(e => e.label == label).First();
+                case ControlType.ObjectField:
+                    return root.Query<UnityEditor.UIElements.ObjectField>().Where(e => e.label == label).First();
                 default:
                     return null;
             }

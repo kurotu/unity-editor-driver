@@ -112,6 +112,7 @@ page.GetByLabel("Optional Settings").Toggle();
 | `Fill(string)` | Clear field and type new text |
 | `Toggle()` | Click a toggle/checkbox control |
 | `SetSlider(float)` | Set slider value (type into numeric field) |
+| `Click()` | Click the center of a control |
 | `CaptureScreenshot(path)` | Save control area as PNG |
 
 ### Page Query API

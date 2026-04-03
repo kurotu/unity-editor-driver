@@ -181,6 +181,13 @@ namespace UniEditWright
             return this;
         }
 
+        /// <summary>Describes an ObjectField control (Material, Texture, etc.).</summary>
+        public Page ObjectField(string label)
+        {
+            _controls.Add(new ControlInfo(label, ControlType.ObjectField));
+            return this;
+        }
+
         // ── Locator ─────────────────────────────────────────────────
 
         /// <summary>

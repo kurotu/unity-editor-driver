@@ -121,6 +121,7 @@ namespace UniEditWright
                 ControlType.Button => EditorStyles.miniButton,
                 ControlType.IntField => EditorStyles.numberField,
                 ControlType.FloatField => EditorStyles.numberField,
+                ControlType.ObjectField => EditorStyles.objectField,
                 _ => EditorStyles.label,
             };
         }

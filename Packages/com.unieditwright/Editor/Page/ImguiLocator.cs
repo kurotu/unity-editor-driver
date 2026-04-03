@@ -74,8 +74,10 @@ namespace UniEditWright
         }
 
         /// <summary>
-        /// Clicks the control's input area, selects all, then types the given text.
-        /// Suitable for TextField and similar input controls.
+        /// Clicks the control's input area, selects all, then replaces with the given text.
+        /// Uses the clipboard (SelectAll + Paste) instead of synthetic KeyDown events
+        /// because IMGUI stops processing KeyDown after the window has received many
+        /// SendEvent calls (e.g. after <see cref="Page.Scan"/>).
         /// </summary>
         public void Fill(string text)
         {
@@ -84,10 +86,18 @@ namespace UniEditWright
             var clickPos = GetFieldClickPosition();
             InputSimulator.MouseClick(_window, clickPos);
 
-            // Select all via IMGUI command event, then type replacement text
             InputSimulator.SendCommand(_window, "SelectAll");
 
-            InputSimulator.TypeText(_window, text);
+            string saved = GUIUtility.systemCopyBuffer;
+            try
+            {
+                GUIUtility.systemCopyBuffer = text;
+                InputSimulator.SendCommand(_window, "Paste");
+            }
+            finally
+            {
+                GUIUtility.systemCopyBuffer = saved;
+            }
         }
 
         /// <summary>

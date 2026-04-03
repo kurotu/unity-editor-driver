@@ -75,11 +75,12 @@ namespace UniEditWright.Tests
                 p.Button("B");
                 p.IntField("I");
                 p.FloatField("F");
+                p.ObjectField("O");
                 p.BeginToggleGroup("TG");
                 p.EndToggleGroup();
             });
 
-            Assert.AreEqual(9, page.Controls.Count);
+            Assert.AreEqual(10, page.Controls.Count);
             Assert.AreEqual(ControlType.Label, page.Controls[0].Type);
             Assert.AreEqual(ControlType.TextField, page.Controls[1].Type);
             Assert.AreEqual(ControlType.Toggle, page.Controls[2].Type);
@@ -87,8 +88,9 @@ namespace UniEditWright.Tests
             Assert.AreEqual(ControlType.Button, page.Controls[4].Type);
             Assert.AreEqual(ControlType.IntField, page.Controls[5].Type);
             Assert.AreEqual(ControlType.FloatField, page.Controls[6].Type);
-            Assert.AreEqual(ControlType.ToggleGroup, page.Controls[7].Type);
-            Assert.AreEqual(ControlType.EndToggleGroup, page.Controls[8].Type);
+            Assert.AreEqual(ControlType.ObjectField, page.Controls[7].Type);
+            Assert.AreEqual(ControlType.ToggleGroup, page.Controls[8].Type);
+            Assert.AreEqual(ControlType.EndToggleGroup, page.Controls[9].Type);
         }
 
         [Test]

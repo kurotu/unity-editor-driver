@@ -57,6 +57,7 @@ namespace UniEditWright
         EndToggleGroup,
         Button,
         IntField,
-        FloatField
+        FloatField,
+        ObjectField
     }
 }

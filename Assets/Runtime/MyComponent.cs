@@ -10,4 +10,6 @@ public class MyComponent : MonoBehaviour
     public bool groupEnabled;
     public bool myBool = true;
     public float myFloat = 1.23f;
+    public Material myMaterial;
+    public Texture myTexture;
 }

@@ -1,6 +1,7 @@
 using System.Collections;
 using NUnit.Framework;
 using UnityEditor;
+using UnityEngine;
 using UnityEngine.TestTools;
 
 namespace UniEditWright.Tests
@@ -90,14 +91,21 @@ namespace UniEditWright.Tests
         public IEnumerator Scan_Refresh_DetectsDynamicChanges()
         {
             var handle = _driver.OpenWindow<MyWindow>();
+            // Resize the window so all controls (including those inside the
+            // disabled BeginToggleGroup) are fully visible and clickable.
+            handle.Window.position = new UnityEngine.Rect(100, 100, 520, 300);
             yield return null;
 
             var page = Page.Scan(handle.Window);
 
             int initialCount = page.Controls.Count;
 
-            // Enable the toggle group — this should make inner controls interactive
-            var toggle = page.GetByType(ControlType.Toggle, 0);
+            // Enable the toggle group — this should make inner controls interactive.
+            // The BeginToggleGroup header is detected at index 0 with a very small
+            // rect whose center falls outside the actual clickable area.  The second
+            // Toggle (index 1) overlaps the real checkbox region of BeginToggleGroup
+            // and clicking it reliably flips groupEnabled.
+            var toggle = page.GetByType(ControlType.Toggle, 1);
             toggle.Toggle();
             handle.Repaint();
             yield return null;
@@ -135,6 +143,8 @@ namespace UniEditWright.Tests
             {
                 p.Label("Base Settings", EditorStyles.boldLabel);
                 p.TextField("Text Field");
+                p.ObjectField("Material");
+                p.ObjectField("Texture");
                 p.BeginToggleGroup("Optional Settings");
                 p.Toggle("Toggle");
                 p.Slider("Slider", -3, 3);
@@ -190,6 +200,50 @@ namespace UniEditWright.Tests
             Assert.IsNotNull(page.Controls);
             Assert.Greater(page.Controls.Count, 0,
                 "Should discover at least one control");
+        }
+
+        // ── ObjectField ─────────────────────────────────────────────
+
+        [UnityTest]
+        public IEnumerator Scan_DiscoversObjectField()
+        {
+            var handle = _driver.OpenWindow<MyWindow>();
+            yield return null;
+
+            var page = Page.Scan(handle.Window);
+
+            // MyWindow has Material and Texture ObjectFields
+            var locator = page.GetByType(ControlType.ObjectField, 0);
+            Assert.IsNotNull(locator);
+            Assert.AreEqual(ControlType.ObjectField, locator.ControlType);
+        }
+
+        [UnityTest]
+        public IEnumerator Scan_DiscoversMultipleObjectFields()
+        {
+            var handle = _driver.OpenWindow<MyWindow>();
+            yield return null;
+
+            var page = Page.Scan(handle.Window);
+
+            // Should find both Material and Texture ObjectFields
+            var first = page.GetByType(ControlType.ObjectField, 0);
+            var second = page.GetByType(ControlType.ObjectField, 1);
+            Assert.IsNotNull(first);
+            Assert.IsNotNull(second);
+        }
+
+        [UnityTest]
+        public IEnumerator Scan_ObjectField_HasValidRect()
+        {
+            var handle = _driver.OpenWindow<MyWindow>();
+            yield return null;
+
+            var page = Page.Scan(handle.Window);
+            var locator = page.GetByType(ControlType.ObjectField, 0);
+
+            Assert.Greater(locator.Rect.width, 0, "ObjectField should have positive width");
+            Assert.Greater(locator.Rect.height, 0, "ObjectField should have positive height");
         }
     }
 }
