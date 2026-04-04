@@ -109,7 +109,12 @@ namespace UniEditWright
             where TComponent : Component
         {
             var go = new GameObject($"UniEditWright_Inspector_{typeof(TComponent).Name}");
-            go.hideFlags = HideFlags.HideAndDontSave;
+            // Use HideInHierarchy | DontSave instead of HideAndDontSave.
+            // HideAndDontSave includes NotEditable, which makes SerializedProperty.editable
+            // return false. UIElements BindProperty then disables bound controls, breaking
+            // UIElements-based inspectors. IMGUI inspectors are unaffected because EditorGUI
+            // APIs do not check the editable flag.
+            go.hideFlags = HideFlags.HideInHierarchy | HideFlags.DontSave;
             _createdGameObjects.Add(go);
 
             var component = go.AddComponent<TComponent>();

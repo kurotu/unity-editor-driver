@@ -19,6 +19,17 @@ namespace UniEditWright.Tests
     {
         private EditorDriver _driver;
 
+        /// <summary>
+        /// Yields several frames so UIElements bindings resolve and the
+        /// internal TextInput registers its command-event handlers.
+        /// </summary>
+        private static IEnumerator WaitForBindings()
+        {
+            yield return null;
+            yield return null;
+            yield return null;
+        }
+
         [SetUp]
         public void SetUp()
         {
@@ -37,15 +48,12 @@ namespace UniEditWright.Tests
         public IEnumerator FillTextField_UpdatesComponentField()
         {
             var handle = _driver.OpenInspector<MyUIElementsComponent>();
-            yield return null;
+            yield return WaitForBindings();
 
             var page = Page.Scan(handle.Window);
             page.GetByLabel("Text Field").Fill("UIElements State");
             handle.Repaint();
-            yield return null;
-
-            // Allow binding to sync the value to the serialized object
-            yield return null;
+            yield return WaitForBindings();
 
             var component = (MyUIElementsComponent)handle.Component;
             Assert.AreEqual("UIElements State", component.myString);
@@ -57,7 +65,7 @@ namespace UniEditWright.Tests
         public IEnumerator ToggleGroup_UpdatesComponentGroupEnabled()
         {
             var handle = _driver.OpenInspector<MyUIElementsComponent>();
-            yield return null;
+            yield return WaitForBindings();
 
             var component = (MyUIElementsComponent)handle.Component;
             Assert.IsFalse(component.groupEnabled,
@@ -66,10 +74,7 @@ namespace UniEditWright.Tests
             var page = Page.Scan(handle.Window);
             page.GetByLabel("Optional Settings").Toggle();
             handle.Repaint();
-            yield return null;
-
-            // Allow binding to sync
-            yield return null;
+            yield return WaitForBindings();
 
             Assert.IsTrue(component.groupEnabled,
                 "groupEnabled should be true after toggling");
@@ -81,7 +86,7 @@ namespace UniEditWright.Tests
         public IEnumerator EnableGroupThenToggle_UpdatesComponentMyBool()
         {
             var handle = _driver.OpenInspector<MyUIElementsComponent>();
-            yield return null;
+            yield return WaitForBindings();
 
             var component = (MyUIElementsComponent)handle.Component;
             Assert.IsTrue(component.myBool, "myBool should be true initially");
@@ -91,8 +96,7 @@ namespace UniEditWright.Tests
             // Enable group
             page.GetByLabel("Optional Settings").Toggle();
             handle.Repaint();
-            yield return null;
-            yield return null;
+            yield return WaitForBindings();
 
             // Re-scan to discover inner controls
             page.Refresh();
@@ -100,8 +104,7 @@ namespace UniEditWright.Tests
             // Toggle the inner toggle
             page.GetByLabel("Toggle").Toggle();
             handle.Repaint();
-            yield return null;
-            yield return null;
+            yield return WaitForBindings();
 
             Assert.IsFalse(component.myBool,
                 "myBool should be false after toggling the inner toggle");
@@ -113,7 +116,7 @@ namespace UniEditWright.Tests
         public IEnumerator SetComponentMyString_ReflectedInUI()
         {
             var handle = _driver.OpenInspector<MyUIElementsComponent>();
-            yield return null;
+            yield return WaitForBindings();
 
             var component = (MyUIElementsComponent)handle.Component;
             component.myString = "From Code";
@@ -121,8 +124,7 @@ namespace UniEditWright.Tests
             // Notify the binding system of the change
             handle.Editor.serializedObject.Update();
             handle.Repaint();
-            yield return null;
-            yield return null;
+            yield return WaitForBindings();
 
             var page = Page.Scan(handle.Window);
             var text = page.GetByLabel("Text Field").ReadText();
@@ -135,7 +137,7 @@ namespace UniEditWright.Tests
         public IEnumerator SetComponentGroupEnabled_InnerControlsBecomeDiscoverable()
         {
             var handle = _driver.OpenInspector<MyUIElementsComponent>();
-            yield return null;
+            yield return WaitForBindings();
 
             // Initially inner controls are not discoverable
             var page = Page.Scan(handle.Window);
@@ -149,8 +151,7 @@ namespace UniEditWright.Tests
 
             handle.Editor.serializedObject.Update();
             handle.Repaint();
-            yield return null;
-            yield return null;
+            yield return WaitForBindings();
 
             page.Refresh();
 
@@ -164,7 +165,7 @@ namespace UniEditWright.Tests
         public IEnumerator FullRoundTrip_UIToStateAndBack()
         {
             var handle = _driver.OpenInspector<MyUIElementsComponent>();
-            yield return null;
+            yield return WaitForBindings();
 
             var component = (MyUIElementsComponent)handle.Component;
 
@@ -176,8 +177,7 @@ namespace UniEditWright.Tests
             var page = Page.Scan(handle.Window);
             page.GetByLabel("Text Field").Fill("Round Trip");
             handle.Repaint();
-            yield return null;
-            yield return null;
+            yield return WaitForBindings();
 
             Assert.AreEqual("Round Trip", component.myString);
 
@@ -185,8 +185,7 @@ namespace UniEditWright.Tests
             component.myString = "Back Again";
             handle.Editor.serializedObject.Update();
             handle.Repaint();
-            yield return null;
-            yield return null;
+            yield return WaitForBindings();
 
             page.Refresh();
             var readBack = page.GetByValue("Back Again").ReadText();

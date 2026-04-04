@@ -24,6 +24,17 @@ namespace UniEditWright.Tests
         private EditorDriver _driver;
         private string _screenshotDir;
 
+        /// <summary>
+        /// Yields several frames so UIElements bindings resolve and the
+        /// internal TextInput registers its command-event handlers.
+        /// </summary>
+        private static IEnumerator WaitForBindings()
+        {
+            yield return null;
+            yield return null;
+            yield return null;
+        }
+
         [SetUp]
         public void SetUp()
         {
@@ -112,7 +123,7 @@ namespace UniEditWright.Tests
         public IEnumerator Scan_ReadTextField_ReturnsDisplayedValue()
         {
             var handle = _driver.OpenInspector<MyUIElementsComponent>();
-            yield return null;
+            yield return WaitForBindings();
 
             var page = Page.Scan(handle.Window);
             var text = page.GetByLabel("Text Field").ReadText();
@@ -126,7 +137,7 @@ namespace UniEditWright.Tests
         public IEnumerator Scan_FillTextField_ThenReadBack()
         {
             var handle = _driver.OpenInspector<MyUIElementsComponent>();
-            yield return null;
+            yield return WaitForBindings();
 
             var page = Page.Scan(handle.Window);
             page.GetByLabel("Text Field").Fill("Inspector UIElements Test");
@@ -198,7 +209,7 @@ namespace UniEditWright.Tests
         {
             // 1. Open inspector
             var handle = _driver.OpenInspector<MyUIElementsComponent>();
-            yield return null;
+            yield return WaitForBindings();
 
             // 2. Scan — labels and values available
             var page = Page.Scan(handle.Window);
@@ -210,7 +221,7 @@ namespace UniEditWright.Tests
             // 4. Edit text field
             page.GetByLabel("Text Field").Fill("Inspector UIElements Black Box");
             handle.Repaint();
-            yield return null;
+            yield return WaitForBindings();
 
             page.Refresh();
             Assert.AreEqual("Inspector UIElements Black Box",
