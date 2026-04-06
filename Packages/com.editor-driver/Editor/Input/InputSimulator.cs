@@ -2,7 +2,7 @@ using System;
 using UnityEditor;
 using UnityEngine;
 
-namespace UniEditWright
+namespace EditorDriver
 {
     /// <summary>
     /// Creates and dispatches synthetic input events to EditorWindows.

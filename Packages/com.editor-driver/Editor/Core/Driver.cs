@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
-namespace UniEditWright
+namespace EditorDriver
 {
     /// <summary>
-    /// Main entry point for UniEditWright E2E testing.
+    /// Main entry point for EditorDriver E2E testing.
     /// Manages editor window and inspector lifecycle.
     /// </summary>
-    public class EditorDriver : IDisposable
+    public class Driver : IDisposable
     {
         private readonly List<EditorWindow> _openedWindows = new List<EditorWindow>();
         private readonly List<GameObject> _createdGameObjects = new List<GameObject>();
@@ -108,7 +108,7 @@ namespace UniEditWright
         private InspectorHandle OpenInspectorInternal<TComponent>(Type editorType)
             where TComponent : Component
         {
-            var go = new GameObject($"UniEditWright_Inspector_{typeof(TComponent).Name}");
+            var go = new GameObject($"EditorDriver_Inspector_{typeof(TComponent).Name}");
             // Use HideInHierarchy | DontSave instead of HideAndDontSave.
             // HideAndDontSave includes NotEditable, which makes SerializedProperty.editable
             // return false. UIElements BindProperty then disables bound controls, breaking

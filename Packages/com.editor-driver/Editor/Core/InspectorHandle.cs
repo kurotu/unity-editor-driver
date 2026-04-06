@@ -3,7 +3,7 @@ using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 
-namespace UniEditWright
+namespace EditorDriver
 {
     /// <summary>
     /// Wraps a custom inspector hosted in an <see cref="InspectorHostWindow"/>.

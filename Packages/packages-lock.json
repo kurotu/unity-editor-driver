@@ -1,7 +1,7 @@
 {
   "dependencies": {
-    "com.unieditwright": {
-      "version": "file:com.unieditwright",
+    "com.editor-driver": {
+      "version": "file:com.editor-driver",
       "depth": 0,
       "source": "embedded",
       "dependencies": {}

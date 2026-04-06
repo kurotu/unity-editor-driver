@@ -2,7 +2,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace UniEditWright
+namespace EditorDriver
 {
     /// <summary>
     /// A lightweight EditorWindow that hosts a single <see cref="UnityEditor.Editor"/>

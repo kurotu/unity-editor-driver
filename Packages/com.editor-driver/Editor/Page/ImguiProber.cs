@@ -4,7 +4,7 @@ using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 
-namespace UniEditWright
+namespace EditorDriver
 {
     /// <summary>
     /// Auto-discovers IMGUI controls by probing an EditorWindow via SendEvent.

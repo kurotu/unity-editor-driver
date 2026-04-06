@@ -4,7 +4,7 @@ using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace UniEditWright
+namespace EditorDriver
 {
     /// <summary>
     /// Resolves control rects for UIElements (UI Toolkit) windows.

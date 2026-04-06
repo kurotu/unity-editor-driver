@@ -1,8 +1,9 @@
 using System.Collections;
 using NUnit.Framework;
 using UnityEngine.TestTools;
+using EditorDriver;
 
-namespace UniEditWright.Tests
+namespace EditorDriver.Tests
 {
     /// <summary>
     /// E2E tests verifying bidirectional state synchronization for
@@ -17,7 +18,7 @@ namespace UniEditWright.Tests
     [TestFixture]
     public class MyUIElementsComponentInspectorStateE2ETests
     {
-        private EditorDriver _driver;
+        private Driver _driver;
 
         /// <summary>
         /// Yields several frames so UIElements bindings resolve and the
@@ -33,7 +34,7 @@ namespace UniEditWright.Tests
         [SetUp]
         public void SetUp()
         {
-            _driver = new EditorDriver();
+            _driver = new Driver();
         }
 
         [TearDown]

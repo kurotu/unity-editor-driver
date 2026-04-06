@@ -4,7 +4,7 @@ using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
 
-namespace UniEditWright
+namespace EditorDriver
 {
     /// <summary>
     /// Captures screenshots of EditorWindows and saves them as PNG files.

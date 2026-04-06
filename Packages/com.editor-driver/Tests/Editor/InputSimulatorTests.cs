@@ -3,7 +3,7 @@ using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
 
-namespace UniEditWright.Tests
+namespace EditorDriver.Tests
 {
     [TestFixture]
     public class InputSimulatorTests

@@ -5,7 +5,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.TestTools;
 
-namespace UniEditWright.Tests
+namespace EditorDriver.Tests
 {
     [TestFixture]
     public class PageTests
@@ -296,7 +296,7 @@ namespace UniEditWright.Tests
         // ── Test helper ─────────────────────────────────────────────
 
         /// <summary>
-        /// Plain IMGUI window with no UniEditWright dependency — the whole point.
+        /// Plain IMGUI window with no EditorDriver dependency — the whole point.
         /// </summary>
         public class TestPlainWindow : EditorWindow
         {

@@ -3,17 +3,17 @@ using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
 
-namespace UniEditWright.Tests
+namespace EditorDriver.Tests
 {
     [TestFixture]
-    public class EditorDriverTests
+    public class DriverTests
     {
-        private EditorDriver _driver;
+        private Driver _driver;
 
         [SetUp]
         public void SetUp()
         {
-            _driver = new EditorDriver();
+            _driver = new Driver();
         }
 
         [TearDown]
@@ -82,7 +82,7 @@ namespace UniEditWright.Tests
             WindowHandle handle;
             EditorWindow window;
 
-            using (var driver = new EditorDriver())
+            using (var driver = new Driver())
             {
                 handle = driver.OpenWindow<TestDriverWindow>();
                 window = handle.Window;

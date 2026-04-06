@@ -1,8 +1,8 @@
 {
     "name": "SampleWindows.E2ETests.Editor",
-    "rootNamespace": "UniEditWright.Tests",
+    "rootNamespace": "EditorDriver.Tests",
     "references": [
-        "UniEditWright.Editor",
+        "EditorDriver.Editor",
         "SampleWindows.Editor",
         "SampleWindows.Runtime"
     ],

@@ -1,8 +1,8 @@
 {
-    "name": "UniEditWright.Tests.Editor",
-    "rootNamespace": "UniEditWright.Tests",
+    "name": "EditorDriver.Tests.Editor",
+    "rootNamespace": "EditorDriver.Tests",
     "references": [
-        "UniEditWright.Editor",
+        "EditorDriver.Editor",
         "SampleWindows.Editor",
         "SampleWindows.Runtime"
     ],

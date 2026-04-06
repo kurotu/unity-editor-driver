@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace UniEditWright
+namespace EditorDriver
 {
     /// <summary>
     /// Describes a single control in a window layout descriptor.

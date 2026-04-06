@@ -4,7 +4,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace UniEditWright
+namespace EditorDriver
 {
     /// <summary>
     /// Describes the control layout of an EditorWindow for non-invasive E2E testing.

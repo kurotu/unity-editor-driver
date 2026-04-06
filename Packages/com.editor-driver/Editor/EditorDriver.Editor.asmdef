@@ -1,6 +1,6 @@
 {
-    "name": "UniEditWright.Editor",
-    "rootNamespace": "UniEditWright",
+    "name": "EditorDriver.Editor",
+    "rootNamespace": "EditorDriver",
     "references": [],
     "includePlatforms": [
         "Editor"

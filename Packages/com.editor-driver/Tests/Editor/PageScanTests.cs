@@ -4,7 +4,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.TestTools;
 
-namespace UniEditWright.Tests
+namespace EditorDriver.Tests
 {
     /// <summary>
     /// Tests for <see cref="Page.Scan"/> auto-discovery.
@@ -13,12 +13,12 @@ namespace UniEditWright.Tests
     [TestFixture]
     public class PageScanTests
     {
-        private EditorDriver _driver;
+        private Driver _driver;
 
         [SetUp]
         public void SetUp()
         {
-            _driver = new EditorDriver();
+            _driver = new Driver();
         }
 
         [TearDown]

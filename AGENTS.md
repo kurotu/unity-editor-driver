@@ -1,23 +1,23 @@
 # AGENTS.md
 
 ## Project Overview
-UniEditWright is an E2E testing framework for Unity Editor extensions.
-It provides a Playwright-like API for automating EditorWindow and custom Inspector interactions and capturing screenshots.
+EditorDriver is an E2E testing framework for Unity Editor extensions.
+It provides a non-invasive API for automating EditorWindow and custom Inspector interactions and capturing screenshots.
 **No modifications to the target EditorWindow or Inspector code are required.**
 Works with both IMGUI and UIElements (UI Toolkit) windows.
 
 ## Architecture
 
-### Package: `Packages/com.unieditwright/`
-- **Editor/Core/**: `EditorDriver` (window & inspector lifecycle), `WindowHandle` (window interaction wrapper), `InspectorHandle` (inspector interaction wrapper), `InspectorHostWindow` (hosts a single Editor in isolation)
+### Package: `Packages/com.editor-driver/`
+- **Editor/Core/**: `Driver` (window & inspector lifecycle), `WindowHandle` (window interaction wrapper), `InspectorHandle` (inspector interaction wrapper), `InspectorHostWindow` (hosts a single Editor in isolation)
 - **Editor/Input/**: `InputSimulator` (synthetic Event creation and dispatch, including IMGUI command events)
 - **Editor/Screenshot/**: `ScreenshotCapture` (window capture to PNG)
-- **Editor/Page/**: `Page` (technology-agnostic control descriptor), `Locator` (Playwright-like interaction), `ILayoutResolver` interface, `ImguiLayoutResolver` (IMGUI rect computation), `UIElementsResolver` (visual tree queries), `ImguiProber` (auto-discovery via SendEvent probing), `ControlInfo` (control metadata)
+- **Editor/Page/**: `Page` (technology-agnostic control descriptor), `Locator` (interaction API), `ILayoutResolver` interface, `ImguiLayoutResolver` (IMGUI rect computation), `UIElementsResolver` (visual tree queries), `ImguiProber` (auto-discovery via SendEvent probing), `ControlInfo` (control metadata)
 - **Tests/Editor/**: NUnit EditMode tests (81 tests)
 
 ### Sample Window: `Assets/Editor/MyWindow.cs`
 - Example EditorWindow using **plain IMGUI** (no framework dependency)
-- Assembly: `SampleWindows.Editor` (no reference to UniEditWright)
+- Assembly: `SampleWindows.Editor` (no reference to EditorDriver)
 
 ### Sample Component + Inspector: `Assets/Runtime/MyComponent.cs` + `Assets/Editor/MyComponentEditor.cs`
 - Example MonoBehaviour with a custom IMGUI inspector (no framework dependency)
@@ -27,7 +27,7 @@ Works with both IMGUI and UIElements (UI Toolkit) windows.
 
 ### Code Style
 - `.editorconfig` at project root defines all rules
-- Namespace: `UniEditWright` for framework, `UniEditWright.Tests` for tests
+- Namespace: `EditorDriver` for framework, `EditorDriver.Tests` for tests
 - Private fields: `_camelCase` prefix
 - Public API: XML doc comments required
 - C# 9.0, netstandard2.1
@@ -37,7 +37,7 @@ Works with both IMGUI and UIElements (UI Toolkit) windows.
 - Verification via `Locator.ReadText()` (clipboard-based) and `Locator.CaptureScreenshot()`
 - Unity Test Framework (NUnit) EditMode tests
 - `[UnityTest]` with `IEnumerator` for tests needing OnGUI context
-- Test assembly: `UniEditWright.Tests.Editor`
+- Test assembly: `EditorDriver.Tests.Editor`
 
 ### Unity-Specific Notes
 - `Event.type` getter returns `Ignore` for mouse events outside OnGUI context (Unity 2022.3 limitation). The raw type IS set correctly and `SendEvent` works.
@@ -52,10 +52,10 @@ Works with both IMGUI and UIElements (UI Toolkit) windows.
 uloop compile --project-path .
 
 # Run all framework tests
-uloop run-tests --filter-type assembly --filter-value "UniEditWright.Tests.Editor"
+uloop run-tests --filter-type assembly --filter-value "EditorDriver.Tests.Editor"
 
 # Run specific test
-uloop run-tests --filter-type exact --filter-value "UniEditWright.Tests.PageTests.Describe_ReturnsPageWithControls"
+uloop run-tests --filter-type exact --filter-value "EditorDriver.Tests.PageTests.Describe_ReturnsPageWithControls"
 ```
 
 ## Page Usage Guide (Non-Invasive E2E Testing)
@@ -65,6 +65,7 @@ To E2E test any EditorWindow **without modifying it**:
 No manual descriptor needed — works with dynamic UIs where controls appear/disappear.
 
 ```csharp
+var driver = new Driver();
 var handle = driver.OpenWindow<MyWindow>();
 yield return null;
 
@@ -128,10 +129,10 @@ page.GetByLabel("Optional Settings").Toggle();
 To E2E test any custom Inspector (Editor subclass) **without modifying it**:
 
 ### Opening an Inspector
-`EditorDriver.OpenInspector<TComponent>()` creates a temporary GameObject, adds the component, creates the custom Editor, and hosts it in an isolated window.
+`Driver.OpenInspector<TComponent>()` creates a temporary GameObject, adds the component, creates the custom Editor, and hosts it in an isolated window.
 
 ```csharp
-var driver = new EditorDriver();
+var driver = new Driver();
 var handle = driver.OpenInspector<MyComponent>();
 yield return null;
 

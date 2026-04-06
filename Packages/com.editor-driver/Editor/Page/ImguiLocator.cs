@@ -2,7 +2,7 @@ using System;
 using UnityEditor;
 using UnityEngine;
 
-namespace UniEditWright
+namespace EditorDriver
 {
     /// <summary>
     /// Playwright-like locator for interacting with EditorWindow controls.
@@ -40,10 +40,10 @@ namespace UniEditWright
         /// <summary>
         /// Reads the displayed text from the control via the clipboard.
         /// Clicks the input area, selects all text, copies to clipboard, then returns it.
-        /// Supported for <see cref="UniEditWright.ControlType.TextField"/>,
-        /// <see cref="UniEditWright.ControlType.IntField"/>,
-        /// <see cref="UniEditWright.ControlType.FloatField"/>, and
-        /// <see cref="UniEditWright.ControlType.Slider"/> (reads the numeric field).
+        /// Supported for <see cref="EditorDriver.ControlType.TextField"/>,
+        /// <see cref="EditorDriver.ControlType.IntField"/>,
+        /// <see cref="EditorDriver.ControlType.FloatField"/>, and
+        /// <see cref="EditorDriver.ControlType.Slider"/> (reads the numeric field).
         /// </summary>
         /// <exception cref="InvalidOperationException">
         /// Thrown when called on a control type that does not have a readable text field.

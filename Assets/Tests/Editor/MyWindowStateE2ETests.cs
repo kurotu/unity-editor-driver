@@ -1,8 +1,9 @@
 using System.Collections;
 using NUnit.Framework;
 using UnityEngine.TestTools;
+using EditorDriver;
 
-namespace UniEditWright.Tests
+namespace EditorDriver.Tests
 {
     /// <summary>
     /// E2E tests verifying bidirectional state synchronization for MyWindow (IMGUI).
@@ -13,12 +14,12 @@ namespace UniEditWright.Tests
     [TestFixture]
     public class MyWindowStateE2ETests
     {
-        private EditorDriver _driver;
+        private Driver _driver;
 
         [SetUp]
         public void SetUp()
         {
-            _driver = new EditorDriver();
+            _driver = new Driver();
         }
 
         [TearDown]

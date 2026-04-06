@@ -4,7 +4,7 @@ using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
 
-namespace UniEditWright.Tests
+namespace EditorDriver.Tests
 {
     [TestFixture]
     public class ScreenshotCaptureTests
@@ -18,7 +18,7 @@ namespace UniEditWright.Tests
             _window = ScriptableObject.CreateInstance<TestCaptureWindow>();
             _window.Show();
 
-            _tempDir = Path.Combine(Path.GetTempPath(), "UniEditWright_ScreenshotTests_" + Guid.NewGuid().ToString("N"));
+            _tempDir = Path.Combine(Path.GetTempPath(), "EditorDriver_ScreenshotTests_" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(_tempDir);
         }
 

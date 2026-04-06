@@ -2,8 +2,9 @@ using System.Collections;
 using System.IO;
 using NUnit.Framework;
 using UnityEngine.TestTools;
+using EditorDriver;
 
-namespace UniEditWright.Tests
+namespace EditorDriver.Tests
 {
     /// <summary>
     /// End-to-end integration test using MyUIElementsComponent's UIElements inspector.
@@ -21,7 +22,7 @@ namespace UniEditWright.Tests
     [TestFixture]
     public class MyUIElementsComponentInspectorE2ETests
     {
-        private EditorDriver _driver;
+        private Driver _driver;
         private string _screenshotDir;
 
         /// <summary>
@@ -38,8 +39,8 @@ namespace UniEditWright.Tests
         [SetUp]
         public void SetUp()
         {
-            _driver = new EditorDriver();
-            _screenshotDir = "UniEditWright_E2E_" + System.Guid.NewGuid().ToString("N");
+            _driver = new Driver();
+            _screenshotDir = "EditorDriver_E2E_" + System.Guid.NewGuid().ToString("N");
             Directory.CreateDirectory(_screenshotDir);
         }
 
