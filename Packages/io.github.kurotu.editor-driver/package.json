@@ -1,5 +1,5 @@
 {
-  "name": "com.editor-driver",
+  "name": "io.github.kurotu.editor-driver",
   "version": "0.1.0",
   "displayName": "EditorDriver",
   "description": "E2E testing framework for Unity Editor extensions. Provides a non-invasive API for automating EditorWindow and Inspector interactions, supporting both IMGUI and UI Toolkit.",

@@ -8,7 +8,7 @@ Works with both IMGUI and UIElements (UI Toolkit) windows.
 
 ## Architecture
 
-### Package: `Packages/com.editor-driver/`
+### Package: `Packages/io.github.kurotu.editor-driver/`
 - **Editor/Core/**: `Driver` (window & inspector lifecycle), `WindowHandle` (window interaction wrapper), `InspectorHandle` (inspector interaction wrapper), `InspectorHostWindow` (hosts a single Editor in isolation)
 - **Editor/Input/**: `InputSimulator` (synthetic Event creation and dispatch, including IMGUI command events)
 - **Editor/Screenshot/**: `ScreenshotCapture` (window capture to PNG)
