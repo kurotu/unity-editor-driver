@@ -4,6 +4,10 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+  checks: write
+
 jobs:
   test:
     name: Run EditMode Tests
@@ -32,6 +36,7 @@ jobs:
           unityVersion: 2022.3.22f1
           testMode: editmode
           artifactsPath: test-results
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
