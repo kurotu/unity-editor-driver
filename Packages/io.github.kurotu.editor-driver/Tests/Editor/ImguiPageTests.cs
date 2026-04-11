@@ -188,9 +188,9 @@ namespace EditorDriver.Tests
 
             var rectBefore = page.Controls[0].Rect;
 
-            // Simulate window resize
+            // Simulate window resize (use SetPosition for cross-platform reliability)
             var pos = _window.position;
-            _window.position = new Rect(pos.x, pos.y, pos.width + 100, pos.height);
+            _window.SetPosition(new Rect(pos.x, pos.y, pos.width + 100, pos.height));
 
             page.Refresh();
 

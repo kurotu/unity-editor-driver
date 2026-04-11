@@ -2,6 +2,7 @@ using System;
 using System.Reflection;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace EditorDriver
 {
@@ -48,8 +49,48 @@ namespace EditorDriver
         /// <summary>Captures a screenshot and saves it as PNG.</summary>
         public void Screenshot(string filePath) => _windowHandle.Screenshot(filePath);
 
-        /// <summary>Forces the window to repaint.</summary>
-        public void Repaint() => _windowHandle.Repaint();
+        /// <summary>
+        /// Forces the window to repaint and synchronizes UIElements bindings.
+        /// <para>
+        /// On some platforms (notably Linux), UIElements binding updates can take
+        /// several frames to propagate after <see cref="UnityEditor.SerializedObject.Update"/>.
+        /// This method forces all bindings on the hosted visual tree to read their
+        /// latest values immediately, so that subsequent <see cref="Page.Scan"/> or
+        /// <see cref="Locator.ReadText"/> calls see up-to-date UI state.
+        /// </para>
+        /// </summary>
+        public void Repaint()
+        {
+            SyncBindings(_windowHandle.Window);
+            _windowHandle.Repaint();
+        }
+
+        /// <summary>
+        /// Walks the visual tree and forces every <see cref="IBinding"/> to
+        /// re-read its backing data (e.g. <see cref="UnityEditor.SerializedProperty"/>).
+        /// </summary>
+        private static void SyncBindings(EditorWindow window)
+        {
+            var root = window?.rootVisualElement;
+            if (root == null) return;
+            SyncBindingsRecursive(root);
+        }
+
+        private static void SyncBindingsRecursive(VisualElement element)
+        {
+            if (element is IBindable bindable)
+            {
+                var binding = bindable.binding;
+                if (binding != null)
+                {
+                    binding.PreUpdate();
+                    binding.Update();
+                }
+            }
+
+            foreach (var child in element.Children())
+                SyncBindingsRecursive(child);
+        }
 
         /// <summary>
         /// Reads a field value from the underlying Component via reflection.
