@@ -46,6 +46,11 @@ Works with both IMGUI and UIElements (UI Toolkit) windows.
 - IMGUI clipboard operations use `ValidateCommand`/`ExecuteCommand` events (not KeyDown with Ctrl+C).
 - Assembly definitions (`.asmdef`) are required for cross-assembly references in Unity.
 
+### Windows/Linux Cross-Platform Notes
+- Use `EditorWindowExtensions.SetPosition()` instead of assigning `EditorWindow.position` directly when tests or layout logic depend on the new size immediately. Linux window managers can apply `position` changes asynchronously, but the min/max-size trick in `SetPosition()` makes the resize deterministic on both Windows and Linux.
+- For UIElements inspectors, call `InspectorHandle.Repaint()` before reading UI state after mutating serialized data. It walks `IBindable` elements and forces `binding.PreUpdate()`/`binding.Update()`, which avoids stale bindings that otherwise show up on Linux.
+- Build temp-file and screenshot paths with `Path.Combine(...)` and `Path.GetTempPath()` rather than hard-coded separators so the same tests work unchanged on Windows and Linux.
+
 ## Build & Test Commands
 ```bash
 # Compile
